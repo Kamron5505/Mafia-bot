@@ -1,9 +1,28 @@
 import random
 from typing import List
-from roles.base_role import ROLES, get_roles_by_team
+from roles.base_role import ROLES, get_roles_by_team, get_role
 
 
-def select_roles(count: int = 6) -> list:
+CLASSIC_12_SETUP = [
+    "don",
+    "mafia",
+    "mafia",
+    "detective",
+    "doctor",
+    "bodyguard",
+    "townsfolk",
+    "townsfolk",
+    "townsfolk",
+    "townsfolk",
+    "townsfolk",
+    "townsfolk",
+]
+
+
+def select_roles(count: int = 12) -> list:
+    if count == 12:
+        return _get_classic_12_roles()
+    
     mafia_roles = get_roles_by_team("mafia")
     town_roles = get_roles_by_team("town")
     neutral_roles = get_roles_by_team("neutral")
@@ -43,6 +62,16 @@ def select_roles(count: int = 6) -> list:
     selected = selected[:count]
     random.shuffle(selected)
     return selected
+
+
+def _get_classic_12_roles() -> list:
+    roles = []
+    for role_name in CLASSIC_12_SETUP:
+        role = get_role(role_name)
+        if role:
+            roles.append(role)
+    random.shuffle(roles)
+    return roles
 
 
 def assign_roles(players: list, selected_roles: list) -> dict:

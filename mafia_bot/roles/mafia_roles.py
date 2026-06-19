@@ -2,12 +2,12 @@ from .base_role import Role, register_role
 
 register_role(Role(
     name="don",
-    title="Okean Qiroli",
+    title="Don — Mafiya Sardori",
     emoji="👑",
     team="mafia",
-    description="Mafiya rahbari. Ovoz berishni boshqarish qobiliyatiga ega.",
+    description="Mafiya sardori. Kechasi uyg'onib, Komissarni qidiradi.",
     night_action=True,
-    action_type="redirect_vote",
+    action_type="find_komissar",
 ))
 
 register_role(Role(

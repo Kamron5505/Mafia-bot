@@ -2,39 +2,39 @@ from .base_role import Role, register_role
 
 register_role(Role(
     name="detective",
-    title="Neptun Soqchisi",
+    title="Komissar / Sherif",
     emoji="🔱",
     team="town",
-    description="Komissar. Har kecha bir o'yinchining rolini tekshiradi.",
+    description="Komissar. Kechasi biror o'yinchini tekshirib, uning qaysi jamoadaligini bilib oladi.",
     night_action=True,
     action_type="investigate",
 ))
 
 register_role(Role(
     name="doctor",
-    title="Qutqaruvchi Delfin",
+    title="Doktor — Tabib",
     emoji="🐬",
     team="town",
-    description="Doktor. Har kecha bir o'yinchini davolaydi (o'limdan saqlaydi).",
+    description="Doktor. Kechasi mafiya otgan odamni davolab, hayotini saqlab qoladi.",
     night_action=True,
     action_type="heal",
 ))
 
 register_role(Role(
     name="townsfolk",
-    title="Dengizchi",
+    title="Oddiy Tinch Aholi",
     emoji="⚓️",
     team="town",
-    description="Oddiy fuqaro. Maksus qobiliyati yo'q, faqat ovoz beradi.",
+    description="Oddiy tinch aholi. Kechasi uxlashadi, kunduzi mantiqan o'ylab, ovoz berish orqali mafiyani topishga harakat qilishadi.",
     passive=True,
 ))
 
 register_role(Role(
     name="bodyguard",
-    title="Marjon Qo'riqchisi",
+    title="Tansoqchi — Qo'riqchi",
     emoji="🛡",
     team="town",
-    description="Serjant. Himoya qilgan o'yinchi o'rniga o'zi o'ladi.",
+    description="Tansoqchi. Kechasi biror o'yinchini himoya qiladi. Agar o'sha odam otilsa, tansoqchi uning o'rniga o'ladi.",
     night_action=True,
     action_type="guard",
 ))

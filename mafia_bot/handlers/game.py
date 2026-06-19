@@ -168,6 +168,28 @@ async def start_game(game_id: int, chat_id: int):
                         NIGHT_ACTION_PROMPT.format(role=role.full_name(), description=role.description),
                         reply_markup=player_list_kb(others, f"investigate:{game_id}"),
                     )
+                elif role.action_type == "find_komissar":
+                    others = [
+                        {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
+                        for uid, pd in game["players"].items()
+                        if pd["alive"] and uid != user_id
+                    ]
+                    await bot.send_message(
+                        user_id,
+                        f"👑 {role.full_name()}\n\nKimni tekshiramiz? Komissarni toping!",
+                        reply_markup=player_list_kb(others, f"find_komissar:{game_id}"),
+                    )
+                elif role.action_type == "guard":
+                    others = [
+                        {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
+                        for uid, pd in game["players"].items()
+                        if pd["alive"] and uid != user_id
+                    ]
+                    await bot.send_message(
+                        user_id,
+                        f"🛡 {role.full_name()}\n\nKimni himoya qilamiz?",
+                        reply_markup=player_list_kb(others, f"guard:{game_id}"),
+                    )
                 else:
                     await bot.send_message(user_id, NIGHT_WAIT)
             except Exception:
@@ -425,6 +447,18 @@ async def start_next_night(game_id: int, chat_id: int, bot=None):
                         user_id,
                         NIGHT_ACTION_PROMPT.format(role=role.full_name(), description=role.description),
                         reply_markup=player_list_kb(alive_others, f"investigate:{game_id}"),
+                    )
+                elif role.action_type == "find_komissar":
+                    await bot.send_message(
+                        user_id,
+                        f"👑 {role.full_name()}\n\nKimni tekshiramiz? Komissarni toping!",
+                        reply_markup=player_list_kb(alive_others, f"find_komissar:{game_id}"),
+                    )
+                elif role.action_type == "guard":
+                    await bot.send_message(
+                        user_id,
+                        f"🛡 {role.full_name()}\n\nKimni himoya qilamiz?",
+                        reply_markup=player_list_kb(alive_others, f"guard:{game_id}"),
                     )
                 else:
                     await bot.send_message(user_id, NIGHT_WAIT)

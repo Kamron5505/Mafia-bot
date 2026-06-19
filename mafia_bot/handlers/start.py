@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 from database.db import Database
 from keyboards.main_menu import main_menu_kb, profile_roles_kb, back_kb
-from utils.messages import MAIN_MENU_TEXT, PROFILE_TEXT, ROLES_LIST_HEADER, ROLE_INFO, LANGUAGE_PROMPT, HELP_TEXT
+from utils.messages import MAIN_MENU_TEXT, PROFILE_TEXT, ROLES_LIST_HEADER, ROLE_INFO, LANGUAGE_PROMPT, HELP_TEXT, RULES_TEXT
 from roles.base_role import get_all_roles
 
 router = Router()
@@ -30,6 +30,11 @@ async def cmd_language(message: Message):
 @router.message(Command("help"))
 async def cmd_help(message: Message):
     await message.answer(HELP_TEXT)
+
+
+@router.message(Command("rules"))
+async def cmd_rules(message: Message):
+    await message.answer(RULES_TEXT, reply_markup=back_kb())
 
 
 @router.callback_query(F.data == "back_main")

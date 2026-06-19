@@ -21,6 +21,7 @@ def resolve_night_actions(actions: list, players: dict) -> list:
     deaths = []
     heals = set()
     blocks = set()
+    guards = {}  # bodyguard_id -> protected_target_id
 
     for action in actions:
         action_type = action.get("action_type", "")
@@ -33,13 +34,29 @@ def resolve_night_actions(actions: list, players: dict) -> list:
             heals.add(target_id)
         elif action_type == "block" and target_id:
             blocks.add(target_id)
+        elif action_type == "guard" and target_id:
+            guards[target_id] = user_id  # bodyguard protects target
 
-    saved = deaths.copy()
-    for d in deaths:
-        if d in heals:
-            saved.remove(d)
+    # First, remove healed deaths
+    saved = [d for d in deaths if d not in heals]
 
-    return saved
+    # Bodyguard logic: if protected target is in deaths, bodyguard dies instead
+    final_deaths = []
+    for d in saved:
+        # Check if anyone is guarding this target
+        guarded_by = None
+        for protected_id, guard_id in guards.items():
+            if protected_id == d:
+                guarded_by = guard_id
+                break
+        if guarded_by is not None:
+            # Bodyguard sacrifices themselves instead
+            if guarded_by not in saved and guarded_by not in deaths:
+                final_deaths.append(guarded_by)
+        else:
+            final_deaths.append(d)
+
+    return final_deaths
 
 
 def get_winning_team_text(winner: str) -> str:
