@@ -1,3 +1,4 @@
+import os
 import aiosqlite
 from config import DB_PATH
 
@@ -13,6 +14,7 @@ class Database:
 
     async def connect(self):
         if self.conn is None:
+            os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
             self.conn = await aiosqlite.connect(DB_PATH)
             self.conn.row_factory = aiosqlite.Row
             await self._create_tables()

@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  bot:
+    build: .
+    container_name: mafia_bot
+    restart: unless-stopped
+    env_file:
+      - mafia_bot/.env
+    volumes:
+      - mafia_bot_data:/app/data
+
+volumes:
+  mafia_bot_data:

@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = "8636014966:AAGKLl5DF6wTylxd_RvklNEvHHUb7eTMqUI"
-DB_PATH = "mafia_bot.db"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+DB_PATH = "data/mafia_bot.db"
 
 GAME_JOIN_TIME = 60
 DAY_DISCUSSION_TIME = 300
