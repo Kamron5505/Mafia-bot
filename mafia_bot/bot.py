@@ -9,6 +9,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
 from config import BOT_TOKEN
 from database.db import Database
@@ -36,11 +37,32 @@ async def on_startup():
     logger.info("✅ Bot ishga tushdi!")
 
 
+async def set_bot_commands(bot: Bot):
+    commands = [
+        BotCommand(command="start", description="🔄 Botni ishga tushirish"),
+        BotCommand(command="profile", description="👤 Profilim"),
+        BotCommand(command="help", description="❓ Yordam"),
+        BotCommand(command="rules", description="📜 Qoidalar"),
+        BotCommand(command="language", description="🌐 Tilni o'zgartirish"),
+        BotCommand(command="referral", description="🔗 Referal tizimi"),
+        BotCommand(command="admin", description="👑 Admin panel"),
+        BotCommand(command="startgame", description="🎮 O'yin boshlash (guruh)"),
+        BotCommand(command="forcestart", description="⏩ Majburiy start (guruh)"),
+        BotCommand(command="endgame", description="⛔ O'yinni tugatish (guruh)"),
+        BotCommand(command="stats", description="📊 O'yin statistikasi (guruh)"),
+        BotCommand(command="players", description="👥 O'yinchilar ro'yxati (guruh)"),
+        BotCommand(command="leave", description="🚪 O'yinni tark etish"),
+    ]
+    await bot.set_my_commands(commands)
+
+
 async def main():
     bot = Bot(
         token=BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN),
     )
+
+    await set_bot_commands(bot)
 
     dp = Dispatcher(storage=MemoryStorage())
 
