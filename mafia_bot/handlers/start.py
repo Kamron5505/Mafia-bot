@@ -4,6 +4,7 @@ from aiogram.filters import Command
 from database.db import Database
 from keyboards.main_menu import main_menu_kb, profile_roles_kb, back_kb
 from utils.messages import MAIN_MENU_TEXT, PROFILE_TEXT, ROLES_LIST_HEADER, ROLE_INFO, LANGUAGE_PROMPT, HELP_TEXT, RULES_TEXT
+import roles
 from roles.base_role import get_all_roles
 
 router = Router()
@@ -26,6 +27,20 @@ async def cmd_start(message: Message):
                 if not existing:
                     await db.add_referral(ref["user_id"], user.id, code)
                     await db.add_achievement(ref["user_id"], "🔗 Referal")
+                    await message.answer(
+                        "✅ *Muvaffaqiyatli taklif qilindingiz!*\n\n"
+                        f"Sizni ID{ref['user_id']} bo'lgan foydalanuvchi taklif qildi.\n"
+                        "Botdan foydalanishingiz mumkin!",
+                    )
+                    try:
+                        await message.bot.send_message(
+                            ref["user_id"],
+                            f"🎉 *Yangi taklif!*\n\n"
+                            f"Sizning taklifingiz bilan {user.first_name} botga qo'shildi!\n"
+                            f"Jami takliflar: {await db.get_referral_count(ref['user_id'])} ta",
+                        )
+                    except Exception:
+                        pass
 
     channels = await db.get_channels()
     if channels:
@@ -145,6 +160,13 @@ async def show_profile(message, user_id: int):
 @router.callback_query(F.data == "roles_list")
 async def show_roles_list(callback: CallbackQuery):
     all_roles = get_all_roles()
+    if not all_roles:
+        await callback.message.edit_text(
+            "🎭 *Rollar ro'yxati*\n\nHozircha rollar mavjud emas.",
+            reply_markup=back_kb(),
+        )
+        await callback.answer()
+        return
     text = ROLES_LIST_HEADER
     for role in all_roles:
         text += ROLE_INFO.format(
@@ -189,5 +211,4 @@ async def handle_language(callback: CallbackQuery):
 @router.callback_query(F.data == "referral")
 async def handle_referral_callback(callback: CallbackQuery):
     await cmd_referral(callback.message)
-    await callback.answer()
     await callback.answer()
