@@ -12,7 +12,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
 from database.db import Database
-from handlers import start, game, night, day, admin
+from handlers import start, game, night, day, admin, admin_panel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,6 +50,7 @@ async def main():
         night.router,
         day.router,
         admin.router,
+        admin_panel.router,
     )
 
     dp.startup.register(on_startup)

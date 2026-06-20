@@ -11,6 +11,7 @@ def main_menu_kb() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="🎲 Chatga kirish", callback_data="join_chat"),
     )
     builder.row(
+        InlineKeyboardButton(text="🔗 Referal", callback_data="referral"),
         InlineKeyboardButton(text="🌐 Til / Language", callback_data="language"),
     )
     builder.row(

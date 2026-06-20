@@ -79,6 +79,47 @@ class Database:
                 resolved INTEGER DEFAULT 0,
                 FOREIGN KEY (game_id) REFERENCES games(game_id)
             );
+
+            CREATE TABLE IF NOT EXISTS channels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                channel_id INTEGER NOT NULL UNIQUE,
+                channel_username TEXT DEFAULT '',
+                title TEXT DEFAULT '',
+                is_required INTEGER DEFAULT 1
+            );
+
+            CREATE TABLE IF NOT EXISTS referral_codes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                code TEXT NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS referrals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                referrer_id INTEGER NOT NULL,
+                referred_id INTEGER NOT NULL UNIQUE,
+                code TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS cards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                price INTEGER DEFAULT 0,
+                duration_days INTEGER DEFAULT 30,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS user_cards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                card_id INTEGER NOT NULL,
+                purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                FOREIGN KEY (card_id) REFERENCES cards(id)
+            );
         """)
         await self.conn.commit()
 
@@ -249,6 +290,130 @@ class Database:
         if self.conn:
             await self.conn.close()
             self.conn = None
+
+    async def add_channel(self, channel_id: int, channel_username: str = "", title: str = ""):
+        await self.conn.execute(
+            "INSERT OR IGNORE INTO channels (channel_id, channel_username, title) VALUES (?, ?, ?)",
+            (channel_id, channel_username, title),
+        )
+        await self.conn.commit()
+
+    async def remove_channel(self, channel_id: int):
+        await self.conn.execute(
+            "DELETE FROM channels WHERE channel_id=?", (channel_id,)
+        )
+        await self.conn.commit()
+
+    async def get_channels(self):
+        cur = await self.conn.execute("SELECT * FROM channels WHERE is_required=1")
+        return await cur.fetchall()
+
+    async def get_all_channels(self):
+        cur = await self.conn.execute("SELECT * FROM channels")
+        return await cur.fetchall()
+
+    async def create_referral_code(self, user_id: int, code: str):
+        try:
+            await self.conn.execute(
+                "INSERT INTO referral_codes (user_id, code) VALUES (?, ?)",
+                (user_id, code),
+            )
+            await self.conn.commit()
+            return True
+        except Exception:
+            return False
+
+    async def get_referral_by_code(self, code: str):
+        cur = await self.conn.execute(
+            "SELECT * FROM referral_codes WHERE code=?", (code,)
+        )
+        return await cur.fetchone()
+
+    async def get_referral_code_by_user(self, user_id: int):
+        cur = await self.conn.execute(
+            "SELECT * FROM referral_codes WHERE user_id=?", (user_id,)
+        )
+        return await cur.fetchone()
+
+    async def add_referral(self, referrer_id: int, referred_id: int, code: str):
+        try:
+            await self.conn.execute(
+                "INSERT INTO referrals (referrer_id, referred_id, code) VALUES (?, ?, ?)",
+                (referrer_id, referred_id, code),
+            )
+            await self.conn.commit()
+            return True
+        except Exception:
+            return False
+
+    async def get_referral_count(self, user_id: int):
+        cur = await self.conn.execute(
+            "SELECT COUNT(*) as cnt FROM referrals WHERE referrer_id=?", (user_id,)
+        )
+        row = await cur.fetchone()
+        return row["cnt"] if row else 0
+
+    async def get_referrals(self, user_id: int):
+        cur = await self.conn.execute(
+            "SELECT * FROM referrals WHERE referrer_id=?", (user_id,)
+        )
+        return await cur.fetchall()
+
+    async def get_referrer(self, referred_id: int):
+        cur = await self.conn.execute(
+            "SELECT * FROM referrals WHERE referred_id=?", (referred_id,)
+        )
+        return await cur.fetchone()
+
+    async def add_card(self, name: str, description: str, price: int, duration_days: int):
+        cur = await self.conn.execute(
+            "INSERT INTO cards (name, description, price, duration_days) VALUES (?, ?, ?, ?)",
+            (name, description, price, duration_days),
+        )
+        await self.conn.commit()
+        return cur.lastrowid
+
+    async def delete_card(self, card_id: int):
+        await self.conn.execute("DELETE FROM cards WHERE id=?", (card_id,))
+        await self.conn.commit()
+
+    async def get_cards(self):
+        cur = await self.conn.execute("SELECT * FROM cards ORDER BY id DESC")
+        return await cur.fetchall()
+
+    async def get_card(self, card_id: int):
+        cur = await self.conn.execute("SELECT * FROM cards WHERE id=?", (card_id,))
+        return await cur.fetchone()
+
+    async def purchase_card(self, user_id: int, card_id: int):
+        import datetime
+        card = await self.get_card(card_id)
+        if not card:
+            return False
+        expires_at = datetime.datetime.now() + datetime.timedelta(days=card["duration_days"])
+        await self.conn.execute(
+            "INSERT INTO user_cards (user_id, card_id, expires_at) VALUES (?, ?, ?)",
+            (user_id, card_id, expires_at.isoformat()),
+        )
+        await self.conn.commit()
+        return True
+
+    async def get_user_cards(self, user_id: int):
+        cur = await self.conn.execute(
+            "SELECT * FROM user_cards WHERE user_id=? ORDER BY purchased_at DESC",
+            (user_id,),
+        )
+        return await cur.fetchall()
+
+    async def has_active_card(self, user_id: int):
+        import datetime
+        now = datetime.datetime.now().isoformat()
+        cur = await self.conn.execute(
+            "SELECT COUNT(*) as cnt FROM user_cards WHERE user_id=? AND expires_at > ?",
+            (user_id, now),
+        )
+        row = await cur.fetchone()
+        return (row["cnt"] if row else 0) > 0
 
     async def set_vote(self, game_id: int, user_id: int, target_id: int):
         await self.conn.execute(

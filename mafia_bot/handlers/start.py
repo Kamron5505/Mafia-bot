@@ -14,6 +14,39 @@ db = Database()
 async def cmd_start(message: Message):
     user = message.from_user
     await db.create_player(user.id, user.username or "", user.first_name or "")
+
+    args = message.text.split()
+    if len(args) > 1:
+        arg = args[1]
+        if arg.startswith("ref_"):
+            code = arg[4:]
+            ref = await db.get_referral_by_code(code)
+            if ref and ref["user_id"] != user.id:
+                existing = await db.get_referrer(user.id)
+                if not existing:
+                    await db.add_referral(ref["user_id"], user.id, code)
+                    await db.add_achievement(ref["user_id"], "🔗 Referal")
+
+    channels = await db.get_channels()
+    if channels:
+        not_joined = []
+        for ch in channels:
+            try:
+                member = await message.bot.get_chat_member(ch["channel_id"], user.id)
+                if member.status == "left":
+                    not_joined.append(ch)
+            except Exception:
+                not_joined.append(ch)
+        if not_joined:
+            text = "📢 *Botdan foydalanish uchun quyidagi kanallarga a'zo bo'ling:*\n\n"
+            for ch in not_joined:
+                ch_name = ch["title"] or ch["channel_username"] or f"Kanal {ch['channel_id']}"
+                ch_link = ch["channel_username"] or f"https://t.me/c/{str(ch['channel_id'])[4:]}"
+                text += f"🔗 [{ch_name}]({ch_link})\n"
+            text += "\nA'zo bo'lgandan so'ng /start ni qayta bosing."
+            await message.answer(text)
+            return
+
     await message.answer(MAIN_MENU_TEXT, reply_markup=main_menu_kb())
 
 
@@ -35,6 +68,31 @@ async def cmd_help(message: Message):
 @router.message(Command("rules"))
 async def cmd_rules(message: Message):
     await message.answer(RULES_TEXT, reply_markup=back_kb())
+
+
+@router.message(Command("referral"))
+async def cmd_referral(message: Message):
+    user = message.from_user
+    code_data = await db.get_referral_code_by_user(user.id)
+    code = ""
+    if not code_data:
+        import string, random
+        letters = string.ascii_lowercase + string.digits
+        code = "".join(random.choice(letters) for _ in range(6))
+        await db.create_referral_code(user.id, code)
+    else:
+        code = code_data["code"]
+    count = await db.get_referral_count(user.id)
+    bot_username = (await message.bot.me()).username
+    text = (
+        f"🔗 *Referal tizimi*\n\n"
+        f"Sizning kodingiz: `{code}`\n"
+        f"Taklif qilinganlar: {count} ta\n\n"
+        f"Havolangiz:\n"
+        f"`https://t.me/{bot_username}?start=ref_{code}`\n\n"
+        f"Do'stlaringizni taklif qiling va bonuslar oling!"
+    )
+    await message.answer(text, reply_markup=back_kb())
 
 
 @router.callback_query(F.data == "back_main")
@@ -126,4 +184,10 @@ async def join_chat_info(callback: CallbackQuery):
 @router.callback_query(F.data == "language")
 async def handle_language(callback: CallbackQuery):
     await callback.message.edit_text(LANGUAGE_PROMPT, reply_markup=back_kb())
+
+
+@router.callback_query(F.data == "referral")
+async def handle_referral_callback(callback: CallbackQuery):
+    await cmd_referral(callback.message)
+    await callback.answer()
     await callback.answer()
