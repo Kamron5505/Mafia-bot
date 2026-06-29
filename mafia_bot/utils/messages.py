@@ -1,210 +1,294 @@
-MAIN_MENU_TEXT = (
-    "🌊 *Mafiya o'yiniga xush kelibsiz!*\n\n"
-    "Bot orqali guruhlarda Mafiya o'yinini o'tkazishingiz mumkin.\n"
-    "Quyidagi tugmalardan birini tanlang:"
-)
+# =============================================
+# Barcha matnlar O'zbek lotin alifbosida
+# =============================================
 
-PROFILE_TEXT = (
-    "👤 *PROFIL*\n"
-    "———————————————\n"
-    "🎮 O'yinlar: {games}\n\n"
-    "🏆 G'alabalar: {wins} ({winrate}%)\n\n"
-    "💀 Mag'lubiyatlar: {losses}\n\n"
-    "🎭 Sevimli rol: {fav_role}\n\n"
-    "⚔️ Mafiya: {mafia_games} marta\n"
-    "🛡 Shahar: {town_games} marta\n"
-    "🌪 Neytral: {neutral_games} marta\n\n"
-    "🏅 Yutuqlar: {achievements}"
-)
+# === Start / Profile ===
+WELCOME_TEXT = """
+🎮 **Mafiya O'yin Botiga Xush Kelibsiz!**
 
-LOBBY_STARTED = (
-    "🎮 *Mafiya o'yini boshlandi!*\n\n"
-    "Guruhda o'yin boshlandi. Qo'shilish uchun pastdagi tugmani bosing!\n\n"
-    "👥 Qo'shilgan o'yinchilar ({count}/{max}):\n"
-    "{players}\n\n"
-    "⏳ Qolgan vaqt: {time} soniya\n"
-    "📌 Kamida 6 o'yinchi kerak"
-)
+Men Telegram guruhingizda qiziqarli Mafiya o'yinlarini tashkil qilaman.
+Guruhda /startgame buyrug'i bilan o'yin boshlang va do'stlaringiz bilan mafiya o'ynang!
 
-PLAYER_JOINED = (
-    "✅ {name} o'yinga qo'shildi!\n\n"
-    "👥 Qo'shilgan o'yinchilar ({count}/{max}):\n"
-    "{players}\n\n"
-    "⏳ Qolgan vaqt: {time} soniya"
-)
+📌 **Asosiy buyruqlar:**
+/start - Botni ishga tushirish
+/profile - Profilim
+/help - Yordam
+/rules - Qoidalar
+/leave - O'yinni tark etish
+"""
 
-GAME_FULL = "❌ O'yin to'la! Maksimum {max} o'yinchi."
+PROFILE_TEXT = """
+👤 **PROFIL**
 
-ALREADY_JOINED = "❌ Siz allaqachon o'yinga qo'shilgansiz!"
+🎮 O'yinlar: {games_played}
 
-GAME_NOT_FOUND = "❌ Faol o'yin topilmadi."
+🏆 G'alabalar: {wins} ({win_rate}%)
+💀 Mag'lubiyatlar: {losses}
 
-NOT_ENOUGH_PLAYERS = "❌ O'yinni boshlash uchun kamida 6 o'yinchi kerak. Hozir: {count}"
+🎭 Sevimli rol: {favorite_role}
 
-GAME_STARTING = "🎮 *O'yin boshlanmoqda!*\n\nRollar tarqatilmoqda..."
+⚔️ Mafiya: {mafia_games} marta | 🛡 Shahar: {town_games} marta | 🌪 Neytral: {neutral_games} marta
 
-ROLE_DISTRIBUTION = (
-    "🎭 *Rolingiz:* {role}\n\n"
-    "{description}\n\n"
-    "📖 *Tim:* {team_label}\n"
-    "Qobiliyatingiz haqida batafsil ma'lumotni /role orqali olishingiz mumkin."
-)
+🏅 Yutuqlar: {achievements}
+"""
 
-NIGHT_START = (
-    "🌙 *N-kecha ({night}) keldi!*\n\n"
-    "Hamma ko'zlarini yumsin...\n"
-    "Faol rollar o'z harakatlarini amalga oshiradi."
-)
+RULES_TEXT = """
+📜 **MAFIYA O'YIN QOIDALARI**
 
-NIGHT_WAIT = "🌙 Kechani kuting... Harakatlar amalga oshirilmoqda."
+🎯 **Maqsad:**
+• 🦈 Qora Kuchlar (Mafiya) — barcha shahar aholisini yo'q qilish
+• 🛡 Oq Kuchlar (Shahar) — barcha mafiya va neytral xavflarni bartaraf etish
+• 🌪 Neytrallar — o'z shaxsiy maqsadlariga erishish
 
-NIGHT_ACTION_PROMPT = (
-    "{role}\n\n"
-    "Kechagi harakatingizni tanlang:\n"
-    "{description}"
-)
+🌙 **Kecha Fazasi:**
+Mafiya a'zolari birgalikda qurbon tanlaydi.
+Doktor, Komissar va boshqa rollar o'z harakatlarini bajaradi.
 
-NIGHT_ACTION_CONFIRMED = "✅ Harakatingiz qabul qilindi!"
+☀️ **Kunduzgi Faza:**
+Barcha o'yinchilar muhokama qiladi (5 daqiqa).
+Ovoz berish orqali gumonlanuvchini chiqarib tashlashadi.
 
-NIGHT_TIMEOUT = "⏰ Vaqt tugadi! Harakatsiz qoldingiz."
+🏆 **G'alaba shartlari:**
+• Mafiya: o'z soni shaharnikiga teng yoki ko'p bo'lganda
+• Shahar: barcha mafiya va neytral tahdidlar yo'q qilinganda
+• Neytral: o'z rol shartlariga qarab
 
-DAY_START = (
-    "🌅 *TONG KELDI* — {night}-kecha tugadi\n\n"
-    "{deaths}\n"
-    "🗣 *Muhokama boshlandi!* Vaqt: 5 daqiqa\n\n"
-    "O'yinchilar muhokama qilishlari mumkin."
-)
+👥 **O'yinchilar:**
+Minimal: {min_players} | Maksimal: {max_players}
+"""
 
-DEATH_ANNOUNCEMENT = (
-    "☠️ Kecha *{player}* halok bo'ldi!\n\n"
-    "Uning roli: {role}\n\n"
-    "💀 O'lim sababi: {reason}"
-)
+HELP_TEXT = """
+❓ **YORDAM**
 
-NO_DEATHS = "☀️ Bu kecha hech kim halok bo'lmadi. Tabib yaxshi ishlamoqda!"
+**Asosiy buyruqlar:**
+/start — Botni ishga tushirish
+/profile — Profilimni ko'rish
+/rules — O'yin qoidalari
+/help — Yordam
+/leave — O'yinni tark etish
 
-VOTE_START = (
-    "⚖️ *OVOZ BERISh VAQTI!*\n\n"
-    "Kim chiqarilsin? O'yinchilardan birini tanlang:\n\n"
-    "⏳ Vaqt: 60 soniya"
-)
+**Guruh buyruqlari (faqat adminlar):**
+/startgame — O'yin boshlash
+/forcestart — Majburiy start
+/endgame — O'yinni tugatish
+/players — O'yinchilar ro'yxati
+/stats — O'yin statistikasi
 
-VOTE_RESULT = (
-    "⚖️ *Ovoz berish natijalari:*\n\n"
-    "{results}\n\n"
-    "{elimination}"
-)
+**Qo'llab-quvvatlanadigan tillar:**
+🇺🇿 O'zbek (lotin)
+"""
 
-VOTE_TIED = "🤝 Ovozlar teng! Hech kim chiqarilmadi."
+# === Game Lobby ===
+GAME_STARTED = """
+🎮 **MAFIYA O'YINI BOSHLANDI!**
 
-PLAYER_ELIMINATED = (
-    "🗡 *{player}* o'yindan chiqarildi!\n\n"
-    "Uning roli: {role}\n\n"
-    "{dramatic_text}"
-)
+O'yinga qo'shilish uchun pastdagi "Qo'shilish" tugmasini bosing.
+O'yin boshlanishiga {time} soniya qoldi!
 
-NOT_ALIVE = "❌ Siz o'liksiz! Faqat tirik o'yinchilar qatnasha oladi."
+👥 Hozirgi o'yinchilar ({count}):
+{players}
+"""
 
-NOT_YOUR_TURN = "❌ Hozir sizning navbatingiz emas."
+GAME_FORCE_START = "⏩ **Majburiy start!** O'yin boshlanmoqda..."
 
-ALREADY_VOTED = "❌ Siz allaqachon ovoz bergansiz!"
+NOT_ENOUGH_PLAYERS = "❌ O'yin boshlash uchun kamida {min_players} o'yinchi kerak. Hozir {count} ta."
 
-VOTE_CONFIRMED = "✅ Ovozigiz qabul qilindi!"
+PLAYER_JOINED = "✅ {name} o'yinga qo'shildi! ({count}/{max})"
+PLAYER_LEFT = "🚪 {name} o'yinni tark etdi."
 
-GAME_OVER_MAFIA = (
-    "🏆 *O'yin tugadi!* 🦈 *Qora Kuchlar* g'alaba qozondi!\n\n"
-    "Mafiya barcha fuqarolarni yo'q qildi!\n\n"
-    "{stats}"
-)
+GAME_STARTING = """
+🎯 **O'YIN BOSHLANMOQDA!**
 
-GAME_OVER_TOWN = (
-    "🏆 *O'yin tugadi!* 🛡 *Oq Kuchlar* g'alaba qozondi!\n\n"
-    "Fuqarolar barcha yovuz kuchlarni tozaladi!\n\n"
-    "{stats}"
-)
+Rollar taqsimlanmoqda...
+"""
 
-GAME_OVER_NEUTRAL = (
-    "🏆 *O'yin tugadi!* 🌪 *Neytral kuch* g'alaba qozondi!\n\n"
-    "{winner} o'z maqsadiga erishdi!\n\n"
-    "{stats}"
-)
+ROLE_REVEAL = """
+{role_info}
 
-ROLES_LIST_HEADER = "🎭 *Barcha rollar:*\n\n"
+📖 Sizning rolingiz: {role_full}
 
-ROLE_INFO = "{emoji} *{title}* ({name})\n📖 {description}\n🏷 Tim: {team}\n\n"
+{description}
 
-PLAYER_LIST = "👥 O'yinchilar ro'yxati:\n{players}"
+✅ {action_info}
+"""
 
-LEAVE_GAME = "🚪 Siz o'yindan chiqdingiz."
+ROLE_DM_TITLE = "🎭 Sizning rolingiz"
+ROLE_DM_TEXT = """
+{role_full}
 
-LEFT_GAME = "🚪 {player} o'yindan chiqdi."
+{description}
 
+Jamoa: {team}
+"""
+
+# === Night Phase ===
+NIGHT_FALL = """
+🌙 **{night_count}-KECHA TUSHDI**
+
+Barcha o'yinchilar uyquga ketishdi...
+Mafiya a'zolari qurbon tanlamoqda...
+"""
+
+NIGHT_ACTION_REQUIRED = """
+🌙 **Kecha harakatingiz**
+
+{role_full}
+
+{description}
+
+Iltimos, harakatingizni bajaring:
+"""
+
+NIGHT_NO_ACTION = """
+🌙 **Kecha**
+
+Sizning bugun kechada maxsus harakatingiz yo'q.
+Ertalabgacha kutib turing... 😴
+"""
+
+NIGHT_ACTION_DONE = "✅ Harakatingiz qabul qilindi!"
+
+NIGHT_TIMEOUT = "⏰ Vaqt tugadi! Harakatingiz o'tkazib yuborildi."
+
+# === Mafia Night ===
+MAFIA_KILL_CHOOSE = """
+🦈 **Mafiya hujumi**
+
+Kim o'ldirilsin? Birgalikda qaror qiling:
+"""
+
+MAFIA_KILL_CONFIRM = "🦈 Mafiya {target} ni o'ldirishga qaror qildi."
+
+# === Day Phase ===
+DAY_BREAK = """
+🌅 **TONG KELDI** — {night_count}-kecha tugadi
+☠️ Kecha hech kim halok bo'lmadi!
+
+🗣 **Muhokama boshlandi!** Vaqt: 5 daqiqa
+"""
+
+DAY_BREAK_DEATH = """
+🌅 **TONG KELDI** — {night_count}-kecha tugadi
+☠️ Kecha {victim} halok bo'ldi!
+
+{death_reason}
+
+🗣 **Muhokama boshlandi!** Vaqt: 5 daqiqa
+"""
+
+VOTE_PHASE = """
+⚖️ **OVOZ BERISH VAQTI!**
+
+Kim chiqarilsin? Quyidagilardan birini tanlang:
+
+Vaqt: {time} soniya
+"""
+
+VOTE_CAST = "✅ Ovozingiz qabul qilindi!"
+VOTE_NOBODY = "❌ Hech kim"
+VOTE_SKIP = "⏭ O'tkazib yuborish"
+
+VOTE_RESULTS = """
+📊 **OVOZ NATIJALARI**
+
+{vote_details}
+
+{JUDGEMENT}
+"""
+
+VOTE_TIED = """
+⚖️ Ovozlar teng! Hech kim chiqarilmaydi.
+"""
+
+VOTE_ELIMINATE = """
+⚖️ **{player} o'yindan chiqarildi!**
+
+🎭 Uning roli: {role_full}
+
+{death_story}
+"""
+
+VOTE_NO_MAJORITY = "📊 Hech kim yetarli ovoz olmadi. Chiqarilish yo'q."
+
+# === Game End ===
+GAME_OVER = """
+🏁 **O'YIN TUGADI!**
+
+{GAME_RESULT}
+
+🎭 **Barcha rollar:**
+{all_roles}
+
+📊 **Statistika:**
+Jami o'yinchilar: {total_players}
+Davomiylik: {nights} kecha
+"""
+
+MAFIA_WIN = "🦈 **Qora Kuchlar g'alaba qozondi!**"
+TOWN_WIN = "🛡 **Oq Kuchlar g'alaba qozondi!**"
+NEUTRAL_WIN = "🌪 **Neytral kuchlar g'alaba qozondi!**"
+
+# === Admin ===
+ADMIN_ONLY = "❌ Faqat guruh adminlari bu buyruqni ishlata oladi."
+GROUP_ONLY = "❌ Bu buyruq faqat guruhda ishlaydi."
+NO_ACTIVE_GAME = "❌ Faol o'yin topilmadi."
+GAME_ENDED = "✅ O'yin tugatildi."
+ALREADY_IN_GAME = "❌ Siz allaqachon o'yindasiz!"
 NOT_IN_GAME = "❌ Siz o'yinda emassiz!"
+GAME_FULL = "❌ O'yin to'lgan! (Maks: {max})"
 
-GAME_ALREADY_STARTED = "❌ O'yin allaqachon boshlangan!"
+GAME_STATS = """
+📊 **O'YIN STATISTIKASI**
 
-ERROR_OCCURRED = "❌ Xatolik yuz berdi. Qaytadan urinib ko'ring."
+🎭 Rollar: {roles}
 
-ADMIN_ONLY = "❌ Faqat guruh adminlari bu amalni bajara oladi."
+📅 Hodisalar:
+{events}
 
-HELP_TEXT = (
-    "🎮 *Mafiya o'yini - Yordam*\n\n"
-    "📌 *Buyruqlar:*\n"
-    "/start - Bosh menyu\n"
-    "/profile - Profil\n"
-    "/leave - O'yindan chiqish\n"
-    "/language - Til tanlash\n"
-    "/rules - Qo'llanma\n\n"
-    "📌 *Qoidalar:*\n"
-    "• 12 ta o'yinchi uchun mo'ljallangan\n"
-    "• Har bir o'yinchi maxsus rol oladi\n"
-    "• Mafiya kechasi o'ldiradi\n"
-    "• Fuqarolar kunduz ovoz beradi\n"
-    "• G'alaba qozonish uchun maqsadingizga yetishing!"
-)
+👥 Tirik: {alive}
+{alive_list}
 
-RULES_TEXT = (
-    "📖 *MAFIYA O'YINI QO'LLANMASI*\n"
-    "━━━━━━━━━━━━━━━━━━━━━\n\n"
-    "👥 *12 ta o'yinchi uchun*\n\n"
-    "🔴 *MAFIYA JAMOASI (3 kishi)*\n"
-    "━━━━━━━━━━━━━━━━━━━\n"
-    "👑 Don (1): Mafiya sardori. Kechasi uyg'onib, Komissarni qidiradi.\n"
-    "🦈 Mafiya (2): Kechasi jamoasi bilan birgalikda tinch aholini otadi.\n\n"
-    "🟢 *TINCH AHOLI JAMOASI (9 kishi)*\n"
-    "━━━━━━━━━━━━━━━━━━━━\n"
-    "🔱 Komissar / Sherif (1): Kechasi biror o'yinchini tekshirib, uning qaysi jamoadaligini bilib oladi.\n"
-    "🐬 Doktor (1): Kechasi mafiya otgan odamni davolab, hayotini saqlab qoladi.\n"
-    "🛡 Tansoqchi (1): Kechasi biror o'yinchini himoya qiladi. Agar o'sha odam otilsa, tansoqchi uning o'rniga o'ladi.\n"
-    "⚓️ Oddiy tinch aholi (6): Kechasi uxlashadi, kunduzi mantiqan o'ylab, ovoz berish orqali mafiyani topishga harakat qilishadi.\n\n"
-    "📌 *OYIN JARAYONI*\n"
-    "━━━━━━━━━━━━━\n"
-    "🌙 *Kechasi:*\n"
-    "• Mafiya bir fuqaroni o'ldirishga qaror qiladi\n"
-    "• Don Komissarni qidiradi\n"
-    "• Komissar bir o'yinchini tekshiradi\n"
-    "• Doktor kimnidir davolaydi\n"
-    "• Tansoqchi kimnidir himoya qiladi\n\n"
-    "☀️ *Kunduzi:*\n"
-    "• O'lganlar e'lon qilinadi\n"
-    "• O'yinchilar muhokama qilishadi\n"
-    "• Ovoz berish orqali bir o'yinchi chiqariladi\n\n"
-    "🏆 *G'ALABA SHARTLARI*\n"
-    "━━━━━━━━━━━━━━━\n"
-    "🔴 Mafiya: Mafiyachilar soni tinch aholi soniga teng yoki ko'p bo'lsa\n"
-    "🟢 Tinch aholi: Barcha mafiyachilar o'yindan chiqarilsa\n"
-)
+💀 O'lgan: {dead}
+{dead_list}
+"""
 
-FORCE_START = "👑 Admin majburiy start berdi! O'yin boshlanmoqda..."
+PLAYERS_LIST = """
+👥 *O'yinchilar:*
+{players}
+"""
 
-GAME_STATS = (
-    "📊 *O'yin statistikasi:*\n\n"
-    "Rollar:\n{roles}\n\n"
-    "Hodisalar:\n{events}\n\n"
-    "Tirik o'yinchilar ({alive}):\n{alive_list}\n\n"
-    "O'lganlar:\n{dead_list}"
-)
+# === Errors ===
+ERROR_OCCURRED = "❌ Xatolik yuz berdi. Keyinroq urinib ko'ring."
+ERROR_START_PRIVATE = "❌ /start buyrug'i faqat shaxsiy xabarlarda ishlaydi."
 
-CONFIRM_LEAVE = "🚪 O'yindan chiqishni xoxlaysizmi?"
+# === Button texts (lotin) ===
+BTN_JOIN_GAME = "✅ Qo'shilish"
+BTN_LEAVE_GAME = "🚪 Chiqish"
+BTN_START_GAME = "🎮 O'yinni boshlash"
+BTN_FORCE_START = "⏩ Majburiy start"
+BTN_END_GAME = "⛔ O'yinni tugatish"
+BTN_VOTE = "🗳 Ovoz berish"
+BTN_SKIP_VOTE = "⏭ O'tkazib yuborish"
+BTN_NO_VOTE = "❌ Hech kim"
+BTN_PROFILE = "👤 Profil"
+BTN_ROLES = "🎭 Rollar"
+BTN_BACK = "◀ Orqaga"
+BTN_CONFIRM = "✅ Tasdiqlash"
+BTN_CANCEL = "❌ Bekor qilish"
+BTN_LANGUAGE = "🌐 Til / Language"
 
-LANGUAGE_PROMPT = "🌐 *Til tanlash:*\nHozircha faqat O'zbek tili mavjud."
+# === Main Menu ===
+MAIN_MENU_TEXT = """
+🎮 **Mafiya O'yin Boti**
+
+Kerakli bo'limni tanlang:
+"""
+
+# === Death Stories ===
+DEATH_STORIES = [
+    "{player} ni mafiya tun bo'yi kuzatib, nihoyat halok qildi. Uning jasadi ertalab topildi.",
+    "{player} uyida o'lik holda topildi. Devorda qon bilan 'Mafiya' deb yozilgan edi.",
+    "{player} g'oyib bo'ldi. Ertalab uning tanasi daryoda suzib yurgan holda topildi.",
+    "{player} ni ovoz berish orqali chiqarib tashlashdi. U oxirgi so'zlarida begunoh ekanligini aytdi.",
+    "{player} ni jamoat joyida osilgan holda topishdi. Bu mafiyaning ogohlantirishi edi.",
+]

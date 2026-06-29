@@ -28,7 +28,7 @@ class GameSession:
     players_json: str = "[]"
 
     def __post_init__(self):
-        self.players: List[GamePlayer] = []
+        self.players: List["GamePlayer"] = []
         self.roles: List[str] = []
 
     @property

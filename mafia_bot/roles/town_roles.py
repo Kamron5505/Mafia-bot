@@ -1,253 +1,278 @@
-from .base_role import Role, register_role
+from roles.base_role import BaseRole
 
-register_role(Role(
-    name="detective",
-    title="Komissar / Sherif",
-    emoji="🔱",
-    team="town",
-    description="Komissar. Kechasi biror o'yinchini tekshirib, uning qaysi jamoadaligini bilib oladi.",
-    night_action=True,
-    action_type="investigate",
-))
 
-register_role(Role(
-    name="doctor",
-    title="Doktor — Tabib",
-    emoji="🐬",
-    team="town",
-    description="Doktor. Kechasi mafiya otgan odamni davolab, hayotini saqlab qoladi.",
-    night_action=True,
-    action_type="heal",
-))
+# ==================== OQ KUCHLAR (SHAHAR) ====================
 
-register_role(Role(
-    name="townsfolk",
-    title="Oddiy Tinch Aholi",
-    emoji="⚓️",
-    team="town",
-    description="Oddiy tinch aholi. Kechasi uxlashadi, kunduzi mantiqan o'ylab, ovoz berish orqali mafiyani topishga harakat qilishadi.",
-    passive=True,
-))
+class NeptunSoqchisi(BaseRole):
+    """Komissar — kechasi bir o'yinchini tekshiradi"""
+    name = "Komissar"
+    title = "Neptun Soqchisi"
+    emoji = "🔱"
+    team = "town"
+    description = "Siz komissarsiz! Kechasi bir o'yinchini tekshirib, uning mafiya yoki shahar aholisi ekanligini bilib olasiz."
+    night_action = True
+    action_type = "investigate"
 
-register_role(Role(
-    name="bodyguard",
-    title="Tansoqchi — Qo'riqchi",
-    emoji="🛡",
-    team="town",
-    description="Tansoqchi. Kechasi biror o'yinchini himoya qiladi. Agar o'sha odam otilsa, tansoqchi uning o'rniga o'ladi.",
-    night_action=True,
-    action_type="guard",
-))
 
-register_role(Role(
-    name="mayor",
-    title="Donishmand Toshbaqa",
-    emoji="🐢",
-    team="town",
-    description="Mer. Ovozi ikki hisoblanadi.",
-    passive=True,
-))
+class QutqaruvchiDelfin(BaseRole):
+    """Doktor — kechasi bir o'yinchini davolaydi"""
+    name = "Doktor"
+    title = "Qutqaruvchi Delfin"
+    emoji = "🐬"
+    team = "town"
+    description = "Siz doktorsiz! Kechasi bir o'yinchini davolaysiz va uni mafiya hujumidan himoya qilasiz."
+    night_action = True
+    action_type = "heal"
 
-register_role(Role(
-    name="priest",
-    title="Dengiz Farishtasi",
-    emoji="🕊",
-    team="town",
-    description="Ruhoniy. Bir o'yinchining tomonini ochib bera oladi.",
-    night_action=True,
-    action_type="reveal",
-    max_uses=1,
-))
 
-register_role(Role(
-    name="hooker",
-    title="Suvparisi",
-    emoji="🧜‍♀️",
-    team="town",
-    description="Fohisha. Kechagi harakatni bloklaydi.",
-    night_action=True,
-    action_type="block",
-))
+class Dengizchi(BaseRole):
+    """Oddiy fuqaro"""
+    name = "Oddiy fuqaro"
+    title = "Dengizchi"
+    emoji = "⚓️"
+    team = "town"
+    description = "Siz oddiy fuqarosiz! Maxsus qobiliyatingiz yo'q, lekin muhokama va ovoz berish orqali mafiyani topishga yordam berasiz."
+    night_action = False
+    passive = True
 
-register_role(Role(
-    name="journalist",
-    title="Kema To'tiqushi",
-    emoji="🦜",
-    team="town",
-    description="Jurnalist. Bir sirni e'lon qilish qobiliyatiga ega.",
-    night_action=True,
-    action_type="publish",
-    max_uses=1,
-))
 
-register_role(Role(
-    name="watcher",
-    title="Dengiz Burguti",
-    emoji="🦅",
-    team="town",
-    description="Kuzatuvchi. Kim kimga tashrif buyurganini ko'radi.",
-    night_action=True,
-    action_type="watch",
-))
+class MarjonQoriqchisi(BaseRole):
+    """Serjant — himoya qilgan o'yinchi o'rniga o'ladi"""
+    name = "Serjant"
+    title = "Marjon Qo'riqchisi"
+    emoji = "🛡"
+    team = "town"
+    description = "Siz serjantsiz! Kechasi bir o'yinchini himoya qilasiz. Agar unga hujum qilinsa, siz uning o'rniga halok bo'lasiz."
+    night_action = True
+    action_type = "bodyguard"
 
-register_role(Role(
-    name="jailer",
-    title="Sodiq Qisqichbaqa",
-    emoji="🦀",
-    team="town",
-    description="Qorovul. Bir o'yinchini qamab qo'yadi va himoyalaydi.",
-    night_action=True,
-    action_type="jail",
-))
 
-register_role(Role(
-    name="hunter",
-    title="G'avvos",
-    emoji="🤿",
-    team="town",
-    description="Ovchi. O'lganda bir o'yinchini otib o'ldiradi.",
-    passive=True,
-))
+class DonishmandToshbaqa(BaseRole):
+    """Mer — ovozlari ikki barobar hisoblanadi"""
+    name = "Mer"
+    title = "Donishmand Toshbaqa"
+    emoji = "🐢"
+    team = "town"
+    description = "Siz mersiz! Sizning ovozingiz ikki barobar hisoblanadi."
+    night_action = False
+    passive = True
 
-register_role(Role(
-    name="guard",
-    title="Ko'k Kit",
-    emoji="🐳",
-    team="town",
-    description="Gvardiyachi. Birinchi mafiya hujumiga chidamli.",
-    passive=True,
-))
 
-register_role(Role(
-    name="judge",
-    title="Okean Qozisi",
-    emoji="⚖️",
-    team="town",
-    description="Sudya. Bir ovozni bekor qilish qobiliyatiga ega.",
-    night_action=False,
-    action_type="cancel_vote",
-    max_uses=1,
-))
+class DengizFarishtasi(BaseRole):
+    """Ruhoniy — bir o'yinchining tarafini ochib beradi"""
+    name = "Ruhoniy"
+    title = "Dengiz Farishtasi"
+    emoji = "🕊"
+    team = "town"
+    description = "Siz ruhoniysiz! Bir marta o'yin davomida bir o'yinchining qaysi tarafda ekanligini ochib berishingiz mumkin."
+    night_action = True
+    action_type = "reveal_alignment"
 
-register_role(Role(
-    name="prosecutor",
-    title="Bolg'abosh Akula",
-    emoji="🔨",
-    team="town",
-    description="Prokuror. Ovozsiz nomzodni sudga topshira oladi.",
-    night_action=False,
-    action_type="force_nominate",
-    max_uses=1,
-))
 
-register_role(Role(
-    name="investigator",
-    title="Mayoqchi",
-    emoji="🔍",
-    team="town",
-    description="Tekshiruvchi. Rol kategoriyasini aniqlaydi.",
-    night_action=True,
-    action_type="investigate_category",
-))
+class Suvparisi(BaseRole):
+    """Fohisha — kechagi harakatni bloklaydi"""
+    name = "Fohisha"
+    title = "Suvparisi"
+    emoji = "🧜‍♀️"
+    team = "town"
+    description = "Siz suvparisisiz! Kechasi bir o'yinchini chalg'itasiz va uning harakatini bloklaysiz."
+    night_action = True
+    action_type = "hook"
 
-register_role(Role(
-    name="sponsor",
-    title="Xazinabon",
-    emoji="💰",
-    team="town",
-    description="Homiy. Bir o'yinchiga immunitet beradi.",
-    night_action=True,
-    action_type="grant_immunity",
-    max_uses=1,
-))
 
-register_role(Role(
-    name="veteran",
-    title="Qaroqchilar Ovchisi",
-    emoji="⚔️",
-    team="town",
-    description="Jangovar fuqaro. Hushyorlikka kirsa, tashrifchilarni o'ldiradi.",
-    night_action=True,
-    action_type="alert",
-    max_uses=3,
-))
+class KemaTotiqushi(BaseRole):
+    """Jurnalist — bir marta bir sirni nashr qiladi"""
+    name = "Jurnalist"
+    title = "Kema To'tiqushi"
+    emoji = "🦜"
+    team = "town"
+    description = "Siz jurnalistsiz! Bir marta o'yin davomida bir sirni (bir o'yinchining rolini) hammaga e'lon qilishingiz mumkin."
+    night_action = True
+    action_type = "publish_secret"
 
-register_role(Role(
-    name="trapper",
-    title="To'r Ustasi",
-    emoji="🕸",
-    team="town",
-    description="Izolyatorchi. Bir o'yinchiga barcha tashriflarni bloklaydi.",
-    night_action=True,
-    action_type="trap",
-))
 
-register_role(Role(
-    name="lifesaver",
-    title="Hayot Qutqaruvchi",
-    emoji="🛟",
-    team="town",
-    description="Qutqaruvchi. Ovoz berishdan chiqarilgan o'yinchini tiriltira oladi.",
-    night_action=False,
-    action_type="save",
-    max_uses=1,
-))
+class DengizBurguti(BaseRole):
+    """Kuzatuvchi — bir o'yinchiga kim kelganini ko'radi"""
+    name = "Kuzatuvchi"
+    title = "Dengiz Burguti"
+    emoji = "🦅"
+    team = "town"
+    description = "Siz kuzatuvchisiz! Kechasi bir o'yinchini kuzatasiz va unga kim tashrif buyurganini bilib olasiz."
+    night_action = True
+    action_type = "watch"
 
-register_role(Role(
-    name="lion",
-    title="Dengiz Sheri",
-    emoji="🦭",
-    team="town",
-    description="Kuchli fuqaro. Rol bloklashga immunitetli.",
-    passive=True,
-))
 
-register_role(Role(
-    name="twins",
-    title="Egizak Baliqlar",
-    emoji="🐟🐟",
-    team="town",
-    description="Egizaklar. Birga yutqazishadi/yutыshadi, bir-birini taniydi.",
-    passive=True,
-))
+class SodiqQisqichbaqa(BaseRole):
+    """Qorovul — bir o'yinchini qamoqqa tashlaydi va himoya qiladi"""
+    name = "Qorovul"
+    title = "Sodiq Qisqichbaqa"
+    emoji = "🦀"
+    team = "town"
+    description = "Siz qorovulsiz! Kechasi bir o'yinchini qamoqqa tashlaysiz. U hech kim bilan aloqa qila olmaydi va hujumlardan himoyalangan bo'ladi."
+    night_action = True
+    action_type = "jail"
 
-register_role(Role(
-    name="blacksmith",
-    title="Langarsoz",
-    emoji="⚓️",
-    team="town",
-    description="Temirchi. Bir o'yinchiga zirh beradi.",
-    night_action=True,
-    action_type="armor",
-    max_uses=1,
-))
 
-register_role(Role(
-    name="explorer",
-    title="Kashfiyotchi",
-    emoji="🗺",
-    team="town",
-    description="Sayyoh. O'yinchini kuzatib, uning nishonini ko'radi.",
-    night_action=True,
-    action_type="track",
-))
+class Gavvos(BaseRole):
+    """Ovchi — o'lganda bir o'yinchini otadi"""
+    name = "Ovchi"
+    title = "G'avvos"
+    emoji = "🤿"
+    team = "town"
+    description = "Siz ovchisiz! Agar o'ldirilsangiz, o'limingizdan oldin bir o'yinchini o'q uzib o'ldirishingiz mumkin."
+    night_action = False
+    passive = True
 
-register_role(Role(
-    name="merchant",
-    title="Savdo Kemasi",
-    emoji="🛳",
-    team="town",
-    description="Savdogar. Ikki o'yinchining qobiliyatini almashtiradi.",
-    night_action=True,
-    action_type="trade",
-))
 
-register_role(Role(
-    name="alchemist",
-    title="Qadimiy Chig'anoq",
-    emoji="🐚",
-    team="town",
-    description="Alkimyogar. Har kecha ikkisidan bir ikkirni yaratadi.",
-    night_action=True,
-    action_type="create_potion",
-))
+class KokKit(BaseRole):
+    """Gvardiyachi — birinchi mafiya hujumiga chidamli"""
+    name = "Gvardiyachi"
+    title = "Ko'k Kit"
+    emoji = "🐳"
+    team = "town"
+    description = "Siz gvardiyachisiz! Birinchi mafiya hujumiga chidamlisiz (o'lmaysiz)."
+    night_action = False
+    passive = True
+
+
+class OkeanQozisi(BaseRole):
+    """Sudya — bir ovozni bekor qilishi mumkin"""
+    name = "Sudya"
+    title = "Okean Qozisi"
+    emoji = "⚖️"
+    team = "town"
+    description = "Siz sudyasiz! Bir marta o'yin davomida bir o'yinchining ovozini bekor qilishingiz mumkin."
+    night_action = False
+    passive = True
+
+
+class BolgaboshAkula(BaseRole):
+    """Prokuror — ovozlarsiz nomzod ko'rsatishi mumkin"""
+    name = "Prokuror"
+    title = "Bolg'abosh Akula"
+    emoji = "🔨"
+    team = "town"
+    description = "Siz prokurorsiz! Bir marta ovozlarsiz bir o'yinchini chiqarilishga nomzod qilib ko'rsatishingiz mumkin."
+    night_action = False
+    passive = True
+
+
+class Mayoqchi(BaseRole):
+    """Tekshiruvchi — rol kategoriyasini tekshiradi"""
+    name = "Tekshiruvchi"
+    title = "Mayoqchi"
+    emoji = "🔍"
+    team = "town"
+    description = "Siz tekshiruvchisiz! Kechasi bir o'yinchining rol kategoriyasini (mafiya/shahar/neytral) tekshirishingiz mumkin."
+    night_action = True
+    action_type = "check_category"
+
+
+class Xazinabon(BaseRole):
+    """Homi'y — bir o'yinchiga immunitet beradi"""
+    name = "Homi'y"
+    title = "Xazinabon"
+    emoji = "💰"
+    team = "town"
+    description = "Siz homi'ysiz! Bir marta bir o'yinchiga immunitet berib, uni keyingi chiqarilishdan himoya qilishingiz mumkin."
+    night_action = True
+    action_type = "grant_immunity"
+
+
+class QaroqchilarOvchisi(BaseRole):
+    """Jangovar fuqaro — hushyor turib, tashrif buyurganlarni o'ldiradi"""
+    name = "Jangovar fuqaro"
+    title = "Qaroqchilar Ovchisi"
+    emoji = "⚔️"
+    team = "town"
+    description = "Siz jangovar fuqarosiz! Kechasi hushyor turishingiz mumkin. Agar kimdir sizga tashrif buyursa, u o'ladi."
+    night_action = True
+    action_type = "alert"
+
+
+class TorUstasi(BaseRole):
+    """Izolyatorchi — bir o'yinchiga tashriflarni bloklaydi"""
+    name = "Izolyatorchi"
+    title = "To'r Ustasi"
+    emoji = "🕸"
+    team = "town"
+    description = "Siz to'r ustasisiz! Kechasi bir o'yinchini to'r bilan o'rab, unga bo'lgan barcha tashriflarni bloklaysiz."
+    night_action = True
+    action_type = "trap"
+
+
+class HayotQutqaruvchi(BaseRole):
+    """Qutqaruvchi — bir marta chiqarilgan o'yinchini qutqaradi"""
+    name = "Qutqaruvchi"
+    title = "Hayot Qutqaruvchi"
+    emoji = "🛟"
+    team = "town"
+    description = "Siz qutqaruvchisiz! Bir marta ovoz berish orqali chiqarilgan o'yinchini qutqarishingiz mumkin."
+    night_action = False
+    passive = True
+
+
+class DengizSheri(BaseRole):
+    """Kuchli fuqaro — bloklashga chidamli"""
+    name = "Kuchli fuqaro"
+    title = "Dengiz Sheri"
+    emoji = "🦭"
+    team = "town"
+    description = "Siz kuchli fuqarosiz! Sizni hech kim bloklay olmaydi va sizning harakatingiz to'xtatilmaydi."
+    night_action = False
+    passive = True
+
+
+class EgizakBaliqlar(BaseRole):
+    """Egizaklar — birga yutadi/yutqazadi, bir-birini tanidi"""
+    name = "Egizaklar"
+    title = "Egizak Baliqlar"
+    emoji = "🐟🐟"
+    team = "town"
+    description = "Siz egizaksiz! Yana bir egizak bor, siz uni bilasiz va u sizni biladi. Birga yutasiz yoki yutqazasiz."
+    night_action = False
+    passive = True
+
+
+class Langarsos(BaseRole):
+    """Temirchi — bir o'yinchiga zirh beradi"""
+    name = "Temirchi"
+    title = "Langarsos"
+    emoji = "⚓️"
+    team = "town"
+    description = "Siz temirchisiz! Kechasi bir o'yinchiga zirh yasab berasiz va uni bir marta hujumdan himoya qilasiz."
+    night_action = True
+    action_type = "give_armor"
+
+
+class Kashfiyotchi(BaseRole):
+    """Sayyoh — bir o'yinchini kuzatib, uning targetini ko'radi"""
+    name = "Sayyoh"
+    title = "Kashfiyotchi"
+    emoji = "🗺"
+    team = "town"
+    description = "Siz sayyohsiz! Kechasi bir o'yinchini kuzatasiz va uning kimga borganini bilib olasiz."
+    night_action = True
+    action_type = "track"
+
+
+class SavdoKemasi(BaseRole):
+    """Savdogar — o'yinchilar orasida qobiliyat almashadi"""
+    name = "Savdogar"
+    title = "Savdo Kemasi"
+    emoji = "🛳"
+    team = "town"
+    description = "Siz savdogarsiz! Kechasi ikki o'yinchining qobiliyatlarini vaqtincha almashtirishingiz mumkin."
+    night_action = True
+    action_type = "trade_abilities"
+
+
+class QadimiyChiganok(BaseRole):
+    """Alkimyogar — har kecha iksir yaratadi"""
+    name = "Alkimyogar"
+    title = "Qadimiy Chig'anoq"
+    emoji = "🐚"
+    team = "town"
+    description = "Siz alkimyogarsiz! Har kecha bir iksir (davolovchi yoki zaharlovchi) yaratib, uni bir o'yinchiga ishlatasiz."
+    night_action = True
+    action_type = "brew_potion"

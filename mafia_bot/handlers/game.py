@@ -1,629 +1,693 @@
 import asyncio
+import logging
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, ChatMemberUpdated
-from aiogram.filters import Command, ChatMemberUpdatedFilter
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import Message, CallbackQuery
+from aiogram.filters import Command
+from aiogram.enums.chat_type import ChatType
+from aiogram.exceptions import TelegramForbiddenError
+
 from database.db import Database
-from keyboards.game_kb import join_game_kb, game_action_kb, player_list_kb, end_game_kb
-from keyboards.vote_kb import vote_kb
-from utils.messages import *
-from utils.role_selector import select_roles, assign_roles
-from utils.game_logic import check_win_condition, resolve_night_actions, generate_death_story
-from roles.base_role import get_role
-from config import GAME_JOIN_TIME, VOTE_TIME, MIN_PLAYERS, MAX_PLAYERS, ROLES_PER_GAME
-from utils.state import active_games, game_timers
+from keyboards.game_kb import get_lobby_keyboard, get_night_action_keyboard
+from keyboards.vote_kb import get_vote_keyboard
+from utils.messages import (
+    GAME_STARTED, ROLE_REVEAL,
+    NIGHT_FALL, NIGHT_ACTION_REQUIRED, NIGHT_NO_ACTION,
+    DAY_BREAK, DAY_BREAK_DEATH,
+    VOTE_PHASE, VOTE_RESULTS, VOTE_ELIMINATE,
+    GAME_OVER, MAFIA_WIN, TOWN_WIN, NEUTRAL_WIN,
+    NOT_ENOUGH_PLAYERS, PLAYER_JOINED,
+    ALREADY_IN_GAME, GAME_FULL, NO_ACTIVE_GAME,
+    ERROR_OCCURRED, VOTE_CAST, PLAYERS_LIST
+)
+from utils.game_logic import (
+    active_games, game_timers, create_game, join_game, leave_game,
+    start_game, start_night, process_night_actions, start_day,
+    cast_vote, skip_vote, process_votes, format_vote_results,
+    get_alive_players_list, check_win_condition,
+    end_game_cleanup, update_player_stats_on_game_end
+)
+from config import GAME_JOIN_TIME, DAY_DISCUSSION_TIME, VOTE_TIME, NIGHT_ACTION_TIME, MIN_PLAYERS, MAX_PLAYERS
 
 router = Router()
 db = Database()
+logger = logging.getLogger(__name__)
 
 
 @router.message(Command("startgame"))
-async def start_game_lobby(message: Message):
+async def cmd_startgame(message: Message):
+    """O'yin boshlash (faqat guruhda)"""
     chat = message.chat
-    if chat.type == "private":
-        await message.answer("❌ O'yinni faqat guruh chatlarida boshlash mumkin!")
+    if chat.type == ChatType.PRIVATE:
+        await message.answer("❌ Bu buyruq faqat guruhda ishlaydi.")
         return
 
     member = await chat.get_member(message.from_user.id)
     if member.status not in ("creator", "administrator"):
-        await message.answer(ADMIN_ONLY)
+        await message.answer("❌ Faqat guruh adminlari o'yin boshlay oladi.")
         return
 
     existing = await db.get_active_game(chat.id)
     if existing:
-        await message.answer(GAME_ALREADY_STARTED)
+        await message.answer("❌ Bu chatda allaqachon faol o'yin bor!")
         return
 
-    game_id = await db.create_game(chat.id)
-    await db.record_event(game_id, "game_start", f"O'yin boshlandi. Admin: {message.from_user.first_name}")
+    try:
+        game_id = await create_game(chat.id)
+    except Exception as e:
+        logger.error(f"O'yin yaratishda xatolik: {e}")
+        await message.answer(ERROR_OCCURRED)
+        return
 
-    active_games[game_id] = {
-        "players": {},
-        "phase": "lobby",
-        "night": 0,
-        "chat_id": chat.id,
-        "started_by": message.from_user.id,
-    }
+    game = active_games[game_id]
+    game["chat_id"] = chat.id
+    game["message_id"] = message.message_id
 
-    await message.answer(
-        LOBBY_STARTED.format(
-            count=0, max=MAX_PLAYERS,
-            players="Hali hech kim qo'shilmadi",
-            time=GAME_JOIN_TIME,
-        ),
-        reply_markup=join_game_kb(game_id),
-    )
+    text = GAME_STARTED.format(time=GAME_JOIN_TIME, count=0, players="Hali hech kim yo'q")
+    msg = await message.answer(text, reply_markup=get_lobby_keyboard(game_id, 0), parse_mode="Markdown")
+    game["lobby_message_id"] = msg.message_id
 
-    game_timers[game_id] = asyncio.create_task(lobby_timer(game_id, chat.id))
+    task = asyncio.create_task(lobby_timer(game_id, chat.id))
+    game_timers[game_id] = task
 
 
 async def lobby_timer(game_id: int, chat_id: int):
-    await asyncio.sleep(GAME_JOIN_TIME)
-    game = active_games.get(game_id)
-    if not game or game["phase"] != "lobby":
-        return
+    """Lobby taymerini boshqaradi"""
+    try:
+        await asyncio.sleep(GAME_JOIN_TIME)
 
-    if len(game["players"]) < MIN_PLAYERS:
-        try:
+        game = active_games.get(game_id)
+        if not game or game["phase"] != "lobby":
+            return
+
+        player_count = len(game["players"])
+        if player_count < MIN_PLAYERS:
             from aiogram import Bot
             from config import BOT_TOKEN
             bot = Bot(token=BOT_TOKEN)
-            await bot.send_message(chat_id, NOT_ENOUGH_PLAYERS.format(count=len(game["players"])))
-            await bot.session.close()
-        except Exception:
-            pass
-        await db.update_game_status(game_id, "ended", "ended")
-        active_games.pop(game_id, None)
-        return
-
-    await start_game(game_id, chat_id)
-
-
-async def start_game(game_id: int, chat_id: int):
-    from aiogram import Bot
-    from config import BOT_TOKEN
-    bot = Bot(token=BOT_TOKEN)
-
-    game = active_games.get(game_id)
-    if not game:
-        await bot.session.close()
-        return
-
-    player_ids = list(game["players"].keys())
-    selected_roles = select_roles(ROLES_PER_GAME)
-    assignments = assign_roles(player_ids, selected_roles)
-
-    await bot.send_message(chat_id, GAME_STARTING)
-
-    for user_id, role in assignments.items():
-        await db.add_player_to_game(
-            game_id, user_id, role.name, role.title, role.team,
-        )
-        game["players"][user_id] = {
-            "role": role,
-            "alive": True,
-            "voted": False,
-            "vote_target": None,
-        }
-        try:
-            role_text = ROLE_DISTRIBUTION.format(
-                role=role.full_name(),
-                description=role.description,
-                team_label=role.team_label(),
+            await bot.send_message(
+                chat_id,
+                NOT_ENOUGH_PLAYERS.format(min_players=MIN_PLAYERS, count=player_count),
+                parse_mode="Markdown"
             )
-            await bot.send_message(user_id, role_text)
-        except Exception:
-            pass
+            await end_game_cleanup(game_id)
+            await bot.session.close()
+            return
 
-    await db.update_game_status(game_id, "night", "night")
-    game["phase"] = "night"
-    game["night"] = 1
+        await force_start_game(game_id, chat_id)
 
-    await bot.send_message(chat_id, NIGHT_START.format(night=1))
-
-    mafia_players = [
-        p for p in game["players"].items()
-        if p[1]["role"].team == "mafia" and p[1]["alive"]
-    ]
-
-    for user_id, pdata in game["players"].items():
-        if not pdata["alive"]:
-            continue
-        role = pdata["role"]
-        if role.night_action or role.passive:
-            try:
-                if role.team == "mafia" and role.action_type == "kill":
-                    alive_others = [
-                        {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
-                        for uid, pd in game["players"].items()
-                        if pd["alive"] and pd["role"].team != "mafia"
-                    ]
-                    if alive_others:
-                        await bot.send_message(
-                            user_id,
-                            f"{role.full_name()}\n\nKimni o'ldiramiz?",
-                            reply_markup=player_list_kb(alive_others, f"mafia_kill:{game_id}"),
-                        )
-                    else:
-                        await bot.send_message(user_id, NIGHT_WAIT)
-                elif role.action_type == "heal":
-                    alive_players = [
-                        {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
-                        for uid, pd in game["players"].items()
-                        if pd["alive"]
-                    ]
-                    await bot.send_message(
-                        user_id,
-                        NIGHT_ACTION_PROMPT.format(role=role.full_name(), description=role.description),
-                        reply_markup=player_list_kb(alive_players, f"heal:{game_id}"),
-                    )
-                elif role.action_type == "investigate":
-                    others = [
-                        {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
-                        for uid, pd in game["players"].items()
-                        if pd["alive"] and uid != user_id
-                    ]
-                    await bot.send_message(
-                        user_id,
-                        NIGHT_ACTION_PROMPT.format(role=role.full_name(), description=role.description),
-                        reply_markup=player_list_kb(others, f"investigate:{game_id}"),
-                    )
-                elif role.action_type == "find_komissar":
-                    others = [
-                        {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
-                        for uid, pd in game["players"].items()
-                        if pd["alive"] and uid != user_id
-                    ]
-                    await bot.send_message(
-                        user_id,
-                        f"👑 {role.full_name()}\n\nKimni tekshiramiz? Komissarni toping!",
-                        reply_markup=player_list_kb(others, f"find_komissar:{game_id}"),
-                    )
-                elif role.action_type == "guard":
-                    others = [
-                        {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
-                        for uid, pd in game["players"].items()
-                        if pd["alive"] and uid != user_id
-                    ]
-                    await bot.send_message(
-                        user_id,
-                        f"🛡 {role.full_name()}\n\nKimni himoya qilamiz?",
-                        reply_markup=player_list_kb(others, f"guard:{game_id}"),
-                    )
-                else:
-                    await bot.send_message(user_id, NIGHT_WAIT)
-            except Exception:
-                pass
-        else:
-            try:
-                await bot.send_message(user_id, NIGHT_WAIT)
-            except Exception:
-                pass
-
-    game["phase"] = "night_action"
-    game_timers[game_id] = asyncio.create_task(night_timer(game_id, chat_id))
-    await bot.session.close()
+    except asyncio.CancelledError:
+        pass
+    except Exception as e:
+        logger.error(f"Lobby taymerida xatolik: {e}")
 
 
-async def night_timer(game_id: int, chat_id: int):
-    from aiogram import Bot
-    from config import BOT_TOKEN
-    bot = Bot(token=BOT_TOKEN)
-
-    await asyncio.sleep(30)
-    game = active_games.get(game_id)
-    if not game or game["phase"] != "night_action":
-        await bot.session.close()
+@router.message(Command("forcestart"))
+async def cmd_forcestart(message: Message):
+    """Majburiy start"""
+    chat = message.chat
+    if chat.type == ChatType.PRIVATE:
+        await message.answer("❌ Bu buyruq faqat guruhda ishlaydi.")
         return
 
-    await resolve_night_and_start_day(game_id, chat_id, bot)
-    await bot.session.close()
-
-
-async def resolve_night_and_start_day(game_id: int, chat_id: int, bot=None):
-    from aiogram import Bot
-    from config import BOT_TOKEN
-    if bot is None:
-        bot = Bot(token=BOT_TOKEN)
-
-    game = active_games.get(game_id)
-    if not game:
-        await bot.session.close()
+    member = await chat.get_member(message.from_user.id)
+    if member.status not in ("creator", "administrator"):
+        await message.answer("❌ Faqat guruh adminlari majburiy start qila oladi.")
         return
 
-    actions = []
-    for user_id, pdata in game["players"].items():
-        if pdata.get("night_action"):
-            actions.append({
-                "user_id": user_id,
-                "action_type": pdata["night_action"]["type"],
-                "target_id": pdata["night_action"]["target"],
-            })
-
-    deaths = resolve_night_actions(actions, game["players"])
-
-    death_text = ""
-    if deaths:
-        for dead_id in deaths:
-            if dead_id in game["players"]:
-                game["players"][dead_id]["alive"] = False
-                await db.kill_player(game_id, dead_id)
-                role = game["players"][dead_id]["role"]
-                death_text += DEATH_ANNOUNCEMENT.format(
-                    player=game["players"][dead_id].get("name", f"ID{dead_id}"),
-                    role=role.full_name(),
-                    reason=generate_death_story(role.name),
-                ) + "\n\n"
-    else:
-        death_text = NO_DEATHS
-
-    winner = check_win_condition([
-        {"user_id": uid, "team": pd["role"].team, "alive": pd["alive"]}
-        for uid, pd in game["players"].items()
-    ])
-
-    if winner:
-        await end_game(game_id, chat_id, winner)
-        await bot.session.close()
+    game_data = await db.get_active_game(chat.id)
+    if not game_data:
+        await message.answer(NO_ACTIVE_GAME)
         return
 
-    await db.update_game_status(game_id, "day", "day")
-    game["phase"] = "day"
-
-    msg = DAY_START.format(night=game["night"], deaths=death_text)
-    await bot.send_message(chat_id, msg)
-
-    game_timers[game_id] = asyncio.create_task(day_discussion_timer(game_id, chat_id, bot))
-
-
-async def day_discussion_timer(game_id: int, chat_id: int, bot):
-    from config import DAY_DISCUSSION_TIME
-    await asyncio.sleep(DAY_DISCUSSION_TIME)
-
-    game = active_games.get(game_id)
-    if not game or game["phase"] != "day":
-        return
-
-    await start_voting(game_id, chat_id, bot)
-
-
-async def start_voting(game_id: int, chat_id: int, bot=None):
-    from aiogram import Bot
-    from config import BOT_TOKEN
-    if bot is None:
-        bot = Bot(token=BOT_TOKEN)
-
-    game = active_games.get(game_id)
-    if not game:
-        await bot.session.close()
-        return
-
-    alive_players = [
-        {"user_id": uid, "username": pd.get("name", f"ID{uid}")}
-        for uid, pd in game["players"].items()
-        if pd["alive"]
-    ]
-
-    if len(alive_players) <= 1:
-        winner = "mafia" if any(pd["role"].team == "mafia" for pd in game["players"].values() if pd["alive"]) else "town"
-        await end_game(game_id, chat_id, winner)
-        await bot.session.close()
-        return
-
-    await db.reset_votes(game_id)
-    for uid in game["players"]:
-        game["players"][uid]["voted"] = False
-        game["players"][uid]["vote_target"] = None
-
-    await db.update_game_status(game_id, "voting", "voting")
-    game["phase"] = "voting"
-
-    await bot.send_message(
-        chat_id,
-        VOTE_START,
-        reply_markup=vote_kb(alive_players, game_id),
-    )
-
-    game_timers[game_id] = asyncio.create_task(vote_timer(game_id, chat_id, bot))
-
-
-async def vote_timer(game_id: int, chat_id: int, bot):
-    await asyncio.sleep(VOTE_TIME)
-    game = active_games.get(game_id)
-    if not game or game["phase"] != "voting":
-        return
-
-    await resolve_votes(game_id, chat_id, bot)
-
-
-async def resolve_votes(game_id: int, chat_id: int, bot=None):
-    from aiogram import Bot
-    from config import BOT_TOKEN
-    if bot is None:
-        bot = Bot(token=BOT_TOKEN)
-
-    game = active_games.get(game_id)
-    if not game:
-        await bot.session.close()
-        return
-
-    vote_counts = {}
-    for uid, pd in game["players"].items():
-        if pd["voted"] and pd["vote_target"] and pd["alive"]:
-            target = pd["vote_target"]
-            vote_counts[target] = vote_counts.get(target, 0) + 1
-
-    if not vote_counts:
-        await bot.send_message(chat_id, VOTE_TIED)
-        await start_next_night(game_id, chat_id, bot)
-        return
-
-    max_votes = max(vote_counts.values())
-    top_players = [uid for uid, count in vote_counts.items() if count == max_votes]
-
-    if len(top_players) > 1:
-        await bot.send_message(chat_id, VOTE_TIED)
-        await start_next_night(game_id, chat_id, bot)
-        return
-
-    eliminated_id = top_players[0]
-    if eliminated_id not in game["players"]:
-        await start_next_night(game_id, chat_id, bot)
-        return
-
-    game["players"][eliminated_id]["alive"] = False
-    await db.kill_player(game_id, eliminated_id)
-    role = game["players"][eliminated_id]["role"]
-
-    elim_text = PLAYER_ELIMINATED.format(
-        player=game["players"][eliminated_id].get("name", f"ID{eliminated_id}"),
-        role=role.full_name(),
-        dramatic_text=generate_death_story(role.name),
-    )
-    await bot.send_message(chat_id, elim_text)
-
-    await db.record_event(
-        game_id, "elimination",
-        f"{game['players'][eliminated_id].get('name', f'ID{eliminated_id}')} ({role.full_name()}) ovoz berish orqali chiqarildi",
-    )
-
-    winner = check_win_condition([
-        {"user_id": uid, "team": pd["role"].team, "alive": pd["alive"]}
-        for uid, pd in game["players"].items()
-    ])
-
-    if winner:
-        await end_game(game_id, chat_id, winner, bot)
-        return
-
-    await start_next_night(game_id, chat_id, bot)
-
-
-async def start_next_night(game_id: int, chat_id: int, bot=None):
-    from aiogram import Bot
-    from config import BOT_TOKEN
-    if bot is None:
-        bot = Bot(token=BOT_TOKEN)
-
-    game = active_games.get(game_id)
-    if not game:
-        await bot.session.close()
-        return
-
-    game["night"] += 1
-    await db.update_game_status(game_id, "night", "night")
-    game["phase"] = "night"
-
-    await bot.send_message(chat_id, NIGHT_START.format(night=game["night"]))
-
-    for user_id, pdata in game["players"].items():
-        if not pdata["alive"]:
-            continue
-        pdata["night_action"] = None
-        role = pdata["role"]
-        try:
-            if role.night_action:
-                alive_others = [
-                    {"user_id": uid, "username": game["players"][uid].get("name", f"ID{uid}")}
-                    for uid, pd in game["players"].items()
-                    if pd["alive"] and uid != user_id
-                ]
-                if role.team == "mafia" and role.action_type == "kill":
-                    non_mafia = [p for p in alive_others if game["players"][p["user_id"]]["role"].team != "mafia"]
-                    if non_mafia:
-                        await bot.send_message(
-                            user_id,
-                            f"{role.full_name()}\n\nKimni o'ldiramiz?",
-                            reply_markup=player_list_kb(non_mafia, f"mafia_kill:{game_id}"),
-                        )
-                elif role.action_type == "heal":
-                    await bot.send_message(
-                        user_id,
-                        NIGHT_ACTION_PROMPT.format(role=role.full_name(), description=role.description),
-                        reply_markup=player_list_kb(alive_others, f"heal:{game_id}"),
-                    )
-                elif role.action_type == "investigate":
-                    await bot.send_message(
-                        user_id,
-                        NIGHT_ACTION_PROMPT.format(role=role.full_name(), description=role.description),
-                        reply_markup=player_list_kb(alive_others, f"investigate:{game_id}"),
-                    )
-                elif role.action_type == "find_komissar":
-                    await bot.send_message(
-                        user_id,
-                        f"👑 {role.full_name()}\n\nKimni tekshiramiz? Komissarni toping!",
-                        reply_markup=player_list_kb(alive_others, f"find_komissar:{game_id}"),
-                    )
-                elif role.action_type == "guard":
-                    await bot.send_message(
-                        user_id,
-                        f"🛡 {role.full_name()}\n\nKimni himoya qilamiz?",
-                        reply_markup=player_list_kb(alive_others, f"guard:{game_id}"),
-                    )
-                else:
-                    await bot.send_message(user_id, NIGHT_WAIT)
-            else:
-                await bot.send_message(user_id, NIGHT_WAIT)
-        except Exception:
-            pass
-
-    game["phase"] = "night_action"
-    game_timers[game_id] = asyncio.create_task(night_timer(game_id, chat_id))
-
-
-async def end_game(game_id: int, chat_id: int, winner: str, bot=None):
-    from aiogram import Bot
-    from config import BOT_TOKEN
-    if bot is None:
-        bot = Bot(token=BOT_TOKEN)
-
-    game = active_games.get(game_id)
-    await db.end_game(game_id)
-
-    for uid, pd in game["players"].items():
-        role_team = pd["role"].team
-        won = (winner == role_team) or (winner == "neutral" and role_team == "neutral")
-        await db.update_player_stats(uid, won, role_team, pd["role"].name)
-        if won:
-            await db.add_achievement(uid, "🎯 Birinchi g'alaba")
-        player_data = await db.get_player(uid)
-        if player_data and player_data["games_played"] == 10:
-            await db.add_achievement(uid, "🔱 10 ta o'yin")
-
-    stats_text = ""
-    for uid, pd in game["players"].items():
-        status = "✅ Tirik" if pd["alive"] else "💀 O'lik"
-        stats_text += f"{pd['role'].short_name()} — {pd.get('name', f'ID{uid}')} {status}\n"
-
-    if winner == "mafia":
-        msg = GAME_OVER_MAFIA.format(stats=stats_text)
-    elif winner == "town":
-        msg = GAME_OVER_TOWN.format(stats=stats_text)
-    else:
-        msg = GAME_OVER_NEUTRAL.format(winner="Neytral kuch", stats=stats_text)
-
-    await bot.send_message(chat_id, msg, reply_markup=end_game_kb())
-
-    active_games.pop(game_id, None)
-    game_timers.pop(game_id, None)
-    await db.close()
-
-
-@router.callback_query(F.data.startswith("join_game:"))
-async def handle_join_game(callback: CallbackQuery):
-    game_id = int(callback.data.split(":")[1])
+    game_id = game_data["game_id"]
     game = active_games.get(game_id)
     if not game or game["phase"] != "lobby":
-        await callback.answer(GAME_NOT_FOUND, show_alert=True)
+        await message.answer("❌ O'yin lobbi bosqichida emas.")
         return
 
-    user_id = callback.from_user.id
-    if user_id in game["players"]:
-        await callback.answer(ALREADY_JOINED, show_alert=True)
+    player_count = len(game["players"])
+    if player_count < MIN_PLAYERS:
+        await message.answer(NOT_ENOUGH_PLAYERS.format(min_players=MIN_PLAYERS, count=player_count))
+        return
+
+    task = game_timers.pop(game_id, None)
+    if task:
+        task.cancel()
+
+    await message.answer("⏩ **Majburiy start!** O'yin boshlanmoqda...", parse_mode="Markdown")
+    await force_start_game(game_id, chat.id)
+
+
+async def force_start_game(game_id: int, chat_id: int):
+    """O'yinni majburiy boshlash"""
+    from aiogram import Bot
+    from config import BOT_TOKEN
+    bot = Bot(token=BOT_TOKEN)
+
+    success = await start_game(game_id)
+    if not success:
+        await bot.send_message(chat_id, ERROR_OCCURRED, parse_mode="Markdown")
+        await bot.session.close()
+        return
+
+    game = active_games[game_id]
+
+    try:
+        await bot.edit_message_reply_markup(chat_id, game.get("lobby_message_id"), reply_markup=None)
+    except Exception:
+        pass
+
+    # Rollarni yuborish
+    for user_id, player in game["players"].items():
+        role = player["role"]
+        if role:
+            try:
+                action_info = "Kechasi harakat qilishingiz kerak!" if role.night_action else "Passiv rol, kechasi uxlaysiz."
+                await bot.send_message(
+                    user_id,
+                    ROLE_REVEAL.format(
+                        role_info=role.full_name(),
+                        role_full=role.full_name(),
+                        description=role.description,
+                        action_info=action_info,
+                    ),
+                    parse_mode="Markdown"
+                )
+            except TelegramForbiddenError:
+                logger.warning(f"Foydalanuvchi {user_id} botni bloklagan")
+            except Exception as e:
+                logger.error(f"Rol yuborishda xatolik {user_id}: {e}")
+
+    await bot.send_message(chat_id, "🎯 **O'YIN BOSHLANDI!** Rollar tarqatildi. Shaxsiy xabarlaringizni tekshiring.", parse_mode="Markdown")
+
+    # Birinchi kechani boshlash va kecha harakatlarini yuborish
+    await start_night(game_id)
+    await bot.send_message(chat_id, NIGHT_FALL.format(night_count=1), parse_mode="Markdown")
+    await send_night_actions(game_id, bot)
+
+    # Kechadan keyin kunduzgi fazaga o'tish
+    await send_day_phase(game_id)
+
+    await bot.session.close()
+
+
+@router.callback_query(F.data.startswith("join:"))
+async def handle_join(callback: CallbackQuery):
+    """O'yinga qo'shilish"""
+    game_id = int(callback.data.split(":")[1])
+    user = callback.from_user
+    game = active_games.get(game_id)
+
+    if not game or game["phase"] != "lobby":
+        await callback.answer("❌ O'yin topilmadi yoki boshlanib ketgan.", show_alert=True)
+        return
+
+    if user.id in game["players"]:
+        await callback.answer(ALREADY_IN_GAME, show_alert=True)
         return
 
     if len(game["players"]) >= MAX_PLAYERS:
         await callback.answer(GAME_FULL.format(max=MAX_PLAYERS), show_alert=True)
         return
 
-    name = callback.from_user.first_name or f"ID{user_id}"
-    game["players"][user_id] = {
-        "name": name,
-        "alive": True,
-        "voted": False,
-        "vote_target": None,
-        "night_action": None,
-    }
+    name = user.first_name or user.username or f"ID{user.id}"
+    success = await join_game(game_id, user.id, name)
 
-    await db.create_player(user_id, callback.from_user.username or "", name)
-    await db.add_player_to_game(game_id, user_id)
+    if success:
+        await callback.answer(f"✅ O'yinga qo'shildingiz!", show_alert=False)
+        await update_lobby_message(game_id)
+    else:
+        await callback.answer("❌ Qo'shilishda xatolik.", show_alert=True)
 
-    player_names = [
-        f"• {pd['name']}" for pd in game["players"].values()
-    ]
+
+@router.callback_query(F.data.startswith("leave:"))
+async def handle_leave(callback: CallbackQuery):
+    """O'yinni tark etish"""
+    game_id = int(callback.data.split(":")[1])
+    user = callback.from_user
+    game = active_games.get(game_id)
+
+    if not game:
+        await callback.answer(NO_ACTIVE_GAME, show_alert=True)
+        return
+
+    success = await leave_game(game_id, user.id)
+    if success:
+        await callback.answer("✅ O'yinni tark etdingiz.", show_alert=False)
+        await update_lobby_message(game_id)
+    else:
+        await callback.answer("❌ Siz o'yinda emassiz.", show_alert=True)
+
+
+async def update_lobby_message(game_id: int):
+    """Lobby xabarini yangilaydi"""
+    from aiogram import Bot
+    from config import BOT_TOKEN
+    bot = Bot(token=BOT_TOKEN)
+
+    game = active_games.get(game_id)
+    if not game or game["phase"] != "lobby":
+        await bot.session.close()
+        return
+
+    players_list = "\n".join([
+        f"👤 {p['name']}" for p in game["players"].values()
+    ]) if game["players"] else "Hali hech kim yo'q"
+
+    text = GAME_STARTED.format(
+        time=GAME_JOIN_TIME,
+        count=len(game["players"]),
+        players=players_list
+    )
 
     try:
-        await callback.message.edit_text(
-            PLAYER_JOINED.format(
-                name=name,
-                count=len(game["players"]),
-                max=MAX_PLAYERS,
-                players="\n".join(player_names),
-                time=GAME_JOIN_TIME,
-            ),
-            reply_markup=join_game_kb(game_id),
+        await bot.edit_message_text(
+            text,
+            chat_id=game["chat_id"],
+            message_id=game["lobby_message_id"],
+            reply_markup=get_lobby_keyboard(game_id, len(game["players"])),
+            parse_mode="Markdown"
         )
-    except TelegramBadRequest:
-        pass
+    except Exception as e:
+        logger.error(f"Lobby xabarini yangilashda xatolik: {e}")
 
-    await callback.answer(f"✅ O'yinga qo'shildingiz!")
+    await bot.session.close()
 
 
-@router.callback_query(F.data.startswith("leave_game:"))
-async def handle_leave_game(callback: CallbackQuery):
-    game_id = int(callback.data.split(":")[1])
+async def send_night_actions(game_id: int, bot):
+    """Kecha harakatlarini yuboradi va 30 soniya kutadi"""
     game = active_games.get(game_id)
     if not game:
-        await callback.answer(GAME_NOT_FOUND, show_alert=True)
         return
 
-    user_id = callback.from_user.id
-    if user_id not in game["players"]:
-        await callback.answer(NOT_IN_GAME, show_alert=True)
-        return
+    alive_players = [p for p in game["players"].values() if p["alive"]]
 
-    name = game["players"][user_id].get("name", f"ID{user_id}")
-    del game["players"][user_id]
+    for player in alive_players:
+        role = player.get("role")
+        if not role:
+            continue
 
-    await callback.message.answer(LEFT_GAME.format(player=name))
-    await callback.answer(LEAVE_GAME)
+        try:
+            if role.night_action:
+                targets = [p for p in alive_players if p["user_id"] != player["user_id"]]
+                if targets:
+                    await bot.send_message(
+                        player["user_id"],
+                        NIGHT_ACTION_REQUIRED.format(
+                            role_full=role.full_name(),
+                            description=role.description
+                        ),
+                        reply_markup=get_night_action_keyboard(game_id, targets, role.action_type),
+                        parse_mode="Markdown"
+                    )
+                else:
+                    await bot.send_message(
+                        player["user_id"],
+                        NIGHT_NO_ACTION,
+                        parse_mode="Markdown"
+                    )
+            else:
+                await bot.send_message(
+                    player["user_id"],
+                    NIGHT_NO_ACTION,
+                    parse_mode="Markdown"
+                )
+        except TelegramForbiddenError:
+            logger.warning(f"Foydalanuvchi {player['user_id']} botni bloklagan")
+        except Exception as e:
+            logger.error(f"Kecha harakati yuborishda xatolik: {e}")
+
+    # 30 soniya kutish (kecha harakatlari uchun)
+    await asyncio.sleep(NIGHT_ACTION_TIME)
 
 
-@router.callback_query(F.data.startswith("force_start:"))
-async def handle_force_start(callback: CallbackQuery):
-    game_id = int(callback.data.split(":")[1])
+async def send_day_phase(game_id: int):
+    """Kunduzgi fazani yuboradi"""
+    from aiogram import Bot
+    from config import BOT_TOKEN
+    bot = Bot(token=BOT_TOKEN)
+
     game = active_games.get(game_id)
     if not game:
-        await callback.answer(GAME_NOT_FOUND, show_alert=True)
+        await bot.session.close()
         return
 
     chat_id = game["chat_id"]
-    member = await callback.message.chat.get_member(callback.from_user.id)
-    if member.status not in ("creator", "administrator"):
-        await callback.answer(ADMIN_ONLY, show_alert=True)
+
+    deaths = await process_night_actions(game_id)
+    death_text = await start_day(game_id, deaths)
+
+    if death_text == "game_over":
+        await bot.session.close()
         return
 
-    if len(game["players"]) < MIN_PLAYERS:
-        await callback.answer(NOT_ENOUGH_PLAYERS.format(count=len(game["players"])), show_alert=True)
+    if deaths:
+        victims = []
+        for uid in deaths:
+            p = game["players"].get(uid)
+            if p:
+                victims.append(p["name"])
+
+        msg = DAY_BREAK_DEATH.format(
+            night_count=game["night_count"],
+            victim=", ".join(victims),
+            death_reason=death_text
+        )
+    else:
+        msg = DAY_BREAK.format(night_count=game["night_count"])
+
+    await bot.send_message(chat_id, msg, parse_mode="Markdown")
+
+    # 5 daqiqa muhokama
+    await asyncio.sleep(DAY_DISCUSSION_TIME)
+
+    # Ovoz berish fazasi
+    game = active_games.get(game_id)
+    if not game or game["phase"] != "day":
+        await bot.session.close()
         return
 
-    await callback.answer("👑 Majburiy start!")
-    await callback.message.answer(FORCE_START)
-    await start_game(game_id, chat_id)
+    await start_voting_phase(game_id, bot)
 
 
-@router.message(Command("leave"))
-async def cmd_leave(message: Message):
-    user_id = message.from_user.id
-    for game_id, game in list(active_games.items()):
-        if user_id in game["players"]:
-            name = game["players"][user_id].get("name", f"ID{user_id}")
-            del game["players"][user_id]
-            await message.answer(LEAVE_GAME)
-            if game.get("chat_id"):
-                from aiogram import Bot
-                from config import BOT_TOKEN
-                bot = Bot(token=BOT_TOKEN)
-                await bot.send_message(game["chat_id"], LEFT_GAME.format(player=name))
-                await bot.session.close()
+async def start_voting_phase(game_id: int, bot):
+    """Ovoz berish fazasini boshlaydi"""
+    game = active_games.get(game_id)
+    if not game:
+        return
+
+    game["phase"] = "voting"
+    game["vote_counts"] = {}
+    game["votes_cast"] = set()
+
+    db = Database()
+    await db.update_game_status(game_id, "active", "voting")
+
+    chat_id = game["chat_id"]
+    alive_players = get_alive_players_list(game_id)
+
+    msg = VOTE_PHASE.format(time=VOTE_TIME)
+    await bot.send_message(chat_id, msg, parse_mode="Markdown")
+
+    for player in alive_players:
+        try:
+            await bot.send_message(
+                player["user_id"],
+                "🗳 **Ovoz berish vaqti!** Kim chiqarilishini tanlang:",
+                reply_markup=get_vote_keyboard(game_id, alive_players, player["user_id"]),
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.error(f"Ovoz berish xabarini yuborishda xatolik: {e}")
+
+    await asyncio.sleep(VOTE_TIME)
+
+    await process_vote_results(game_id, bot)
+
+
+async def process_vote_results(game_id: int, bot):
+    """Ovoz natijalarini hisoblaydi va e'lon qiladi"""
+    game = active_games.get(game_id)
+    if not game:
+        return
+
+    chat_id = game["chat_id"]
+    result = await process_votes(game_id)
+
+    if result and result.get("eliminated"):
+        eliminated = result["player"]
+
+        vote_details = format_vote_results(game_id)
+        await bot.send_message(
+            chat_id,
+            VOTE_RESULTS.format(
+                vote_details=vote_details,
+                JUDGEMENT=""
+            ),
+            parse_mode="Markdown"
+        )
+
+        role_short = eliminated["role"].short_name() if eliminated.get("role") else "?"
+        await bot.send_message(
+            chat_id,
+            VOTE_ELIMINATE.format(
+                player=eliminated["name"],
+                role_full=role_short,
+                death_story=f"{eliminated['name']} o'yindan chiqarildi!"
+            ),
+            parse_mode="Markdown"
+        )
+
+        winner = await check_win_condition(game_id)
+        if winner:
+            await end_game_procedure(game_id, winner, bot)
+            await bot.session.close()
             return
-    await message.answer(NOT_IN_GAME)
+    else:
+        await bot.send_message(
+            chat_id,
+            VOTE_RESULTS.format(
+                vote_details="Hech kim yetarli ovoz olmadi.",
+                JUDGEMENT="⏭ Hech kim chiqarilmaydi."
+            ),
+            parse_mode="Markdown"
+        )
+
+    # Keyingi kechani boshlash
+    night = game["night_count"] + 1
+    await bot.send_message(chat_id, NIGHT_FALL.format(night_count=night), parse_mode="Markdown")
+
+    await start_night(game_id)
+    # Kecha harakatlarini yuborish va kutish
+    await send_night_actions(game_id, bot)
+    # Keyin kunduzgi faza
+    await send_day_phase(game_id)
+
+    await bot.session.close()
 
 
-@router.callback_query(F.data == "rematch")
-async def handle_rematch(callback: CallbackQuery):
-    await callback.message.edit_text(
-        "Yangi o'yin boshlash uchun /startgame buyrug'ini yuboring.",
-        reply_markup=None,
+async def end_game_procedure(game_id: int, winner: str, bot):
+    """O'yin tugash jarayoni"""
+    game = active_games.get(game_id)
+    if not game:
+        return
+
+    chat_id = game["chat_id"]
+
+    result_texts = {
+        "mafia": MAFIA_WIN,
+        "town": TOWN_WIN,
+        "neutral": NEUTRAL_WIN,
+    }
+    result_text = result_texts.get(winner, "O'yin tugadi!")
+
+    # O'yinchilar statistikasini yangilash
+    await update_player_stats_on_game_end(game_id, winner)
+
+    # Barcha rollarni ko'rsatish
+    all_roles = []
+    for uid, p in game["players"].items():
+        status = "✅" if p["alive"] else "💀"
+        role_name = p["role"].short_name() if p.get("role") else "?"
+        all_roles.append(f"{status} {p['name']} — {role_name}")
+
+    await bot.send_message(
+        chat_id,
+        GAME_OVER.format(
+            GAME_RESULT=result_text,
+            all_roles="\n".join(all_roles),
+            total_players=len(game["players"]),
+            nights=game["night_count"]
+        ),
+        parse_mode="Markdown"
     )
-    await callback.answer()
+
+    await end_game_cleanup(game_id)
+
+
+# === Callback handlers ===
+
+@router.callback_query(F.data.startswith("vote:"))
+async def handle_vote(callback: CallbackQuery):
+    """Ovoz berish callback'i"""
+    parts = callback.data.split(":")
+    if len(parts) < 3:
+        await callback.answer("❌ Xatolik yuz berdi.", show_alert=True)
+        return
+
+    game_id = int(parts[1])
+    target_id = int(parts[2])
+    voter_id = callback.from_user.id
+
+    success = await cast_vote(game_id, voter_id, target_id)
+
+    if success:
+        await callback.answer(VOTE_CAST, show_alert=True)
+        try:
+            await callback.message.edit_text("✅ **Ovozingiz qabul qilindi!** Natijalarni kuting.", parse_mode="Markdown")
+        except Exception:
+            pass
+    else:
+        await callback.answer("❌ Ovoz berishda xatolik. Allaqachon ovoz bergansiz yoki o'yinda emassiz.", show_alert=True)
+
+
+@router.callback_query(F.data.startswith("vote_skip:"))
+async def handle_vote_skip(callback: CallbackQuery):
+    """Ovozni o'tkazib yuborish"""
+    parts = callback.data.split(":")
+    if len(parts) < 2:
+        await callback.answer("❌ Xatolik.", show_alert=True)
+        return
+
+    game_id = int(parts[1])
+    voter_id = callback.from_user.id
+
+    success = await skip_vote(game_id, voter_id)
+    if success:
+        await callback.answer("⏭ Ovoz o'tkazib yuborildi.", show_alert=True)
+        try:
+            await callback.message.edit_text("⏭ **Ovoz o'tkazib yuborildi.**", parse_mode="Markdown")
+        except Exception:
+            pass
+    else:
+        await callback.answer("❌ Xatolik yuz berdi.", show_alert=True)
+
+
+@router.callback_query(F.data == "vote:continue")
+async def handle_vote_continue(callback: CallbackQuery):
+    """Ovoz natijalaridan keyin davom etish"""
+    await callback.answer("⏭ Davom etilmoqda...", show_alert=False)
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+
+
+@router.callback_query(F.data.startswith("night_action:"))
+async def handle_night_action(callback: CallbackQuery):
+    """Kecha harakati callback'i"""
+    parts = callback.data.split(":")
+    if len(parts) < 4:
+        await callback.answer("❌ Xatolik.", show_alert=True)
+        return
+
+    game_id = int(parts[1])
+    action_type = parts[2]
+    target_id = int(parts[3])
+    user_id = callback.from_user.id
+
+    game = active_games.get(game_id)
+    if not game:
+        await callback.answer(NO_ACTIVE_GAME, show_alert=True)
+        return
+
+    if game["phase"] != "night":
+        await callback.answer("❌ Hozir kecha fazasi emas.", show_alert=True)
+        return
+
+    await db.save_night_action(game_id, game["night_count"], user_id, action_type, target_id)
+
+    if action_type == "mafia_kill":
+        game["mafia_kill_target"] = target_id
+
+    await callback.answer("✅ Harakatingiz qabul qilindi!", show_alert=True)
+
+    try:
+        await callback.message.edit_text(
+            "✅ **Harakatingiz qabul qilindi!** Ertalab natijalarni kuting.",
+            parse_mode="Markdown"
+        )
+    except Exception:
+        pass
+
+
+@router.callback_query(F.data.startswith("night_skip:"))
+async def handle_night_skip(callback: CallbackQuery):
+    """Kecha harakatini o'tkazib yuborish"""
+    await callback.answer("⏭ Harakat o'tkazib yuborildi.", show_alert=True)
+    try:
+        await callback.message.edit_text(
+            "⏭ **Harakat o'tkazib yuborildi.**",
+            parse_mode="Markdown"
+        )
+    except Exception:
+        pass
+
+
+# === Group commands ===
+
+@router.message(Command("players"))
+async def cmd_players(message: Message):
+    """O'yinchilar ro'yxati"""
+    chat = message.chat
+    if chat.type == ChatType.PRIVATE:
+        await message.answer("❌ Bu buyruq faqat guruhda ishlaydi.")
+        return
+
+    game_data = await db.get_active_game(chat.id)
+    if not game_data:
+        await message.answer(NO_ACTIVE_GAME)
+        return
+
+    game = active_games.get(game_data["game_id"])
+    if not game:
+        await message.answer(NO_ACTIVE_GAME)
+        return
+
+    players = [
+        f"{'✅' if p['alive'] else '💀'} {p.get('name', f'ID{uid}')}"
+        for uid, p in game["players"].items()
+    ]
+
+    text = PLAYERS_LIST.format(players="\n".join(players)) if players else "👥 Hali hech kim yo'q"
+    await message.answer(text, parse_mode="Markdown")
+
+
+@router.message(Command("stats"))
+async def cmd_stats(message: Message):
+    """O'yin statistikasi"""
+    chat = message.chat
+    if chat.type == ChatType.PRIVATE:
+        await message.answer("❌ Bu buyruq faqat guruhda ishlaydi.")
+        return
+
+    game_data = await db.get_active_game(chat.id)
+    if not game_data:
+        await message.answer(NO_ACTIVE_GAME)
+        return
+
+    game = active_games.get(game_data["game_id"])
+    if not game:
+        await message.answer(NO_ACTIVE_GAME)
+        return
+
+    alive_list = []
+    dead_list = []
+
+    for uid, p in game["players"].items():
+        name = p.get("name", f"ID{uid}")
+        role_name = p["role"].short_name() if p.get("role") else "?"
+        entry = f"{role_name} — {name}"
+        if p["alive"]:
+            alive_list.append(entry)
+        else:
+            dead_list.append(entry)
+
+    events = await db.get_events(game_data["game_id"])
+    event_text = "\n".join(f"• {e['description']}" for e in events[-5:]) or "Hodisalar yo'q"
+
+    text = f"""
+📊 **O'YIN STATISTIKASI**
+
+🎭 Rollar: {', '.join(p['role'].short_name() for p in game['players'].values() if p.get('role'))}
+
+📅 Hodisalar:
+{event_text}
+
+👥 Tirik: {len(alive_list)}
+{chr(10).join(alive_list) if alive_list else '—'}
+
+💀 O'lgan: {len(dead_list)}
+{chr(10).join(dead_list) if dead_list else '—'}
+"""
+    await message.answer(text, parse_mode="Markdown")

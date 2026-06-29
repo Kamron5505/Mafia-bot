@@ -1,199 +1,223 @@
-from .base_role import Role, register_role
+from roles.base_role import BaseRole
 
-register_role(Role(
-    name="don",
-    title="Don — Mafiya Sardori",
-    emoji="👑",
-    team="mafia",
-    description="Mafiya sardori. Kechasi uyg'onib, Komissarni qidiradi.",
-    night_action=True,
-    action_type="find_komissar",
-))
 
-register_role(Role(
-    name="mafia",
-    title="Akula",
-    emoji="🦈",
-    team="mafia",
-    description="Oddiy mafiya. Har kecha bir fuqaroni o'ldiradi.",
-    night_action=True,
-    action_type="kill",
-))
+# ==================== QORA KUCHLAR (MAFIYA) ====================
 
-register_role(Role(
-    name="yakuza",
-    title="Qaroqchilar Sardori",
-    emoji="🏴‍☠️",
-    team="mafia",
-    description="Bir fuqaroni o'z tomoniga og'dira oladi.",
-    night_action=True,
-    action_type="convert",
-    max_uses=1,
-))
+class OkeanQirali(BaseRole):
+    """Don — Mafiya rahbari, ovozlarni qayta yo'naltirishi mumkin"""
+    name = "Don"
+    title = "Okean Qirali"
+    emoji = "👑"
+    team = "mafia"
+    description = "Siz mafiya rahbarisiz! Kechasi mafiya bilan birga qurbon tanlaysiz. Bundan tashqari, kunduzgi ovoz berishda bir marta ovozlarni boshqa o'yinchiga yo'naltirishingiz mumkin."
+    night_action = True
+    action_type = "mafia_kill"
 
-register_role(Role(
-    name="fugu",
-    title="Zaharli Fugu",
-    emoji="🐡",
-    team="mafia",
-    description="Mafiya yordamchisi. Bir o'yinchini kechasi bloklaydi.",
-    night_action=True,
-    action_type="block",
-))
 
-register_role(Role(
-    name="squid",
-    title="Gigant Kalmar",
-    emoji="🦑",
-    team="mafia",
-    description="Qora qaroqchi. Rol haqidagi ma'lumotni o'g'irlaydi.",
-    night_action=True,
-    action_type="steal_info",
-))
+class Akula(BaseRole):
+    """Oddiy mafiya qotili"""
+    name = "Mafiya"
+    title = "Akula"
+    emoji = "🦈"
+    team = "mafia"
+    description = "Siz oddiy mafiya a'zosisiz. Kechasi boshqa mafiya a'zolari bilan birga qurbon tanlaysiz."
+    night_action = True
+    action_type = "mafia_kill"
 
-register_role(Role(
-    name="crab_thief",
-    title="Qisqichbaqa-o'g'ri",
-    emoji="🦀",
-    team="mafia",
-    description="O'g'ri. Boshqa rolning qobiliyatini o'g'irlaydi.",
-    night_action=True,
-    action_type="steal_ability",
-))
 
-register_role(Role(
-    name="jellyfish",
-    title="Chaquvchi Meduza",
-    emoji="🪼",
-    team="mafia",
-    description="Shantajchi. Bir o'yinchini kunduz sukut qilishga majburlaydi.",
-    night_action=True,
-    action_type="silence",
-))
+class QaroqchilarSardori(BaseRole):
+    """Yakudza — bir shahar aholisini mafiyaga aylantirishi mumkin"""
+    name = "Yakudza"
+    title = "Qaroqchilar Sardori"
+    emoji = "🏴‍☠️"
+    team = "mafia"
+    description = "Siz yakudza sardorisiz! Bir marta o'yin davomida bir shahar aholisini o'z tarafingizga o'tkazishingiz mumkin."
+    night_action = True
+    action_type = "convert"
 
-register_role(Role(
-    name="crocodile",
-    title="Sho'r suv Timsohi",
-    emoji="🐊",
-    team="mafia",
-    description="Advokat. Mafiya a'zosini ovoz berishdan himoya qiladi.",
-    night_action=True,
-    action_type="protect_vote",
-))
 
-register_role(Role(
-    name="swordfish",
-    title="Qilichbaliq",
-    emoji="🗡",
-    team="mafia",
-    description="Qotil. Kunduz o'ldirish qobiliyatiga ega.",
-    night_action=False,
-    action_type="day_kill",
-))
+class ZaharliFugu(BaseRole):
+    """Mafiya yordamchisi — bir o'yinchini bloklaydi"""
+    name = "Mafiya yordamchisi"
+    title = "Zaharli Fugu"
+    emoji = "🐡"
+    team = "mafia"
+    description = "Siz mafiya yordamchisisiz! Kechasi bir o'yinchining harakatini bloklashingiz mumkin."
+    night_action = True
+    action_type = "block"
 
-register_role(Role(
-    name="chameleon",
-    title="Xameleon Baliq",
-    emoji="🐠",
-    team="mafia",
-    description="Josus. Tekshiruvchiga fuqaro bo'lib ko'rinadi.",
-    passive=True,
-))
 
-register_role(Role(
-    name="killer_whale",
-    title="Qotil Kit",
-    emoji="🐋",
-    team="mafia",
-    description="Reketir. O'yinchini majburan birovga ovoz berishga majburlaydi.",
-    night_action=True,
-    action_type="force_vote",
-))
+class GigantKalmar(BaseRole):
+    """Qora qaroqchi — rol ma'lumotini o'g'irlaydi"""
+    name = "Qora qaroqchi"
+    title = "Gigant Kalmar"
+    emoji = "🦑"
+    team = "mafia"
+    description = "Siz qora qaroqchisiz! Kechasi bir o'yinchining rolini bilib olishingiz mumkin."
+    night_action = True
+    action_type = "steal_info"
 
-register_role(Role(
-    name="abyss",
-    title="Dengiz Tubsizi",
-    emoji="🕳",
-    team="mafia",
-    description="Ko'lanka. Kechki tekshiruvlarga ko'rinmaydi.",
-    passive=True,
-))
 
-register_role(Role(
-    name="mine_fish",
-    title="Mina-baliq",
-    emoji="💣",
-    team="mafia",
-    description="Bombachi. Chiqarilsa, yonidagini portlatadi.",
-    passive=True,
-))
+class QisqichbaqaOGri(BaseRole):
+    """O'g'ri — boshqa roldan qobiliyat o'g'irlaydi"""
+    name = "O'g'ri"
+    title = "Qisqichbaqa-o'g'ri"
+    emoji = "🦀"
+    team = "mafia"
+    description = "Siz o'g'risiz! Bir marta bir o'yinchining qobiliyatini o'g'irlab, undan foydalanishingiz mumkin."
+    night_action = True
+    action_type = "steal_ability"
 
-register_role(Role(
-    name="stingray",
-    title="Zilzilaviy Skat",
-    emoji="🧪",
-    team="mafia",
-    description="Zaharlovchi. O'yinchini zaharlaydi, keyingi kecha o'ladi.",
-    night_action=True,
-    action_type="poison",
-))
 
-register_role(Role(
-    name="scorpion",
-    title="Dengiz Chayoni",
-    emoji="🦂",
-    team="mafia",
-    description="Yollanma qotil. Bir nishonni o'ldirish topshirig'ini oladi.",
-    night_action=True,
-    action_type="contract_kill",
-    max_uses=1,
-))
+class ChaqquvchiMeduza(BaseRole):
+    """Shantajchi — bir o'yinchi kunduzi gapira olmaydi"""
+    name = "Shantajchi"
+    title = "Chaqquvchi Meduza"
+    emoji = "🪼"
+    team = "mafia"
+    description = "Siz shantajchisiz! Kechasi bir o'yinchini shantaj qilib, ertasi kuni uning gapirishiga yo'l qo'ymaysiz."
+    night_action = True
+    action_type = "silence"
 
-register_role(Role(
-    name="rat",
-    title="Kema Kalamushi",
-    emoji="🐀",
-    team="mafia",
-    description="Sotqin. Fuqaro bo'lib ko'rinadi, lekin mafiya uchun ishlaydi.",
-    passive=True,
-))
 
-register_role(Role(
-    name="necromancer",
-    title="O'lik Dengizchi",
-    emoji="🦴",
-    team="mafia",
-    description="Nekromant. O'lgan o'yinchining qobiliyatini bir marta ishlatadi.",
-    night_action=True,
-    action_type="necromancy",
-    max_uses=1,
-))
+class ShurSuvTimsohi(BaseRole):
+    """Advokat — mafiya a'zosini ovozdan himoya qiladi"""
+    name = "Advokat"
+    title = "Sho'r suv Timsohi"
+    emoji = "🐊"
+    team = "mafia"
+    description = "Siz advokatsiz! Kunduzi bir marta mafiya a'zosini chiqarilishdan himoya qilishingiz mumkin."
+    night_action = False
+    passive = True
 
-register_role(Role(
-    name="sea_snake",
-    title="Dengiz Iloni",
-    emoji="🐍",
-    team="mafia",
-    description="Yovuz jodugar. Ikki o'yinchining rolini almashtiradi.",
-    night_action=True,
-    action_type="swap_roles",
-))
 
-register_role(Role(
-    name="piranha",
-    title="Piranya",
-    emoji="🩸",
-    team="mafia",
-    description="Odamxo'r. Har o'ldirishda kuchayadi (qo'shimcha ovoz vazni).",
-    passive=True,
-))
+class Qilichbaliq(BaseRole):
+    """Qotil — kunduzi o'ldiradi"""
+    name = "Qotil"
+    title = "Qilichbaliq"
+    emoji = "🗡"
+    team = "mafia"
+    description = "Siz qotilsiz! Kunduzi bir marta bir o'yinchini o'ldirishingiz mumkin."
+    night_action = False
+    passive = True
 
-register_role(Role(
-    name="corrupt_water",
-    title="Ifloslangan Suv",
-    emoji="🦠",
-    team="mafia",
-    description="Qora tabib. Mafiyani davolaydi, fuqaroni zaharlaydi.",
-    night_action=True,
-    action_type="corrupt_heal",
-))
+
+class XameleonBaliq(BaseRole):
+    """Josus — detektivga shahar aholisi bo'lib ko'rinadi"""
+    name = "Josus"
+    title = "Xameleon Baliq"
+    emoji = "🐠"
+    team = "mafia"
+    description = "Siz josussiz! Detektiv sizni tekshirganda, siz shahar aholisi bo'lib ko'rinasiz."
+    night_action = False
+    passive = True
+
+
+class QotilKit(BaseRole):
+    """Reketir — bir o'yinchini ma'lum targetga ovoz berishga majbur qiladi"""
+    name = "Reketir"
+    title = "Qotil Kit"
+    emoji = "🐋"
+    team = "mafia"
+    description = "Siz reketirsiz! Kechasi bir o'yinchini ma'lum bir kishiga ovoz berishga majburlashingiz mumkin."
+    night_action = True
+    action_type = "force_vote"
+
+
+class DengizTubisiz(BaseRole):
+    """Ko'lanka — kechagi tekshiruvlardan yashirinadi"""
+    name = "Ko'lanka"
+    title = "Dengiz Tubisiz"
+    emoji = "🕳"
+    team = "mafia"
+    description = "Siz ko'lankasiz! Kechagi barcha tekshiruvlardan yashirinib qolasiz. Sizni hech kim tekshira olmaydi."
+    night_action = False
+    passive = True
+
+
+class MinaBaliq(BaseRole):
+    """Bombachi — chiqarilganda portlaydi va yonidagini o'ldiradi"""
+    name = "Bombachi"
+    title = "Mina-baliq"
+    emoji = "💣"
+    team = "mafia"
+    description = "Siz bombachisiz! Agar ovoz berish orqali chiqarilsangiz, portlaysiz va bir tasodifiy o'yinchini o'zingiz bilan birga olib ketasiz."
+    night_action = False
+    passive = True
+
+
+class ZilzilaviySkat(BaseRole):
+    """Zaharlovchi — zaharlaydi, keyingi kechada o'ladi"""
+    name = "Zaharlovchi"
+    title = "Zilzilaviy Skat"
+    emoji = "🧪"
+    team = "mafia"
+    description = "Siz zaharlovchisiz! Kechasi bir o'yinchini zaharlaysiz, u keyingi kechada halok bo'ladi."
+    night_action = True
+    action_type = "poison"
+
+
+class DengizChayoni(BaseRole):
+    """Yollanma qotil — bir targetni o'ldirish uchun yollangan"""
+    name = "Yollanma qotil"
+    title = "Dengiz Chayoni"
+    emoji = "🦂"
+    team = "mafia"
+    description = "Siz yollanma qotilsiz! Bir marta bir o'yinchini o'ldirishingiz mumkin. Agar muvaffaqiyatli o'ldirsangiz, g'alaba qozonasiz."
+    night_action = True
+    action_type = "kill_once"
+
+
+class KemaKalamushi(BaseRole):
+    """Sotqin — shahar aholisi lekin mafiya uchun ishlaydi"""
+    name = "Sotqin"
+    title = "Kema Kalamushi"
+    emoji = "🐀"
+    team = "mafia"
+    description = "Siz sotqinsiz! Shahar aholisiga o'xshaysiz, lekin aslida mafiya uchun ishlaysiz. Mafiya g'alaba qozonsa, siz ham g'alaba qozonasiz."
+    night_action = False
+    passive = True
+
+
+class OlikDengizchi(BaseRole):
+    """Nekromant — o'lgan o'yinchining qobiliyatidan bir marta foydalanadi"""
+    name = "Nekromant"
+    title = "O'lik Dengizchi"
+    emoji = "🦴"
+    team = "mafia"
+    description = "Siz nekromantsiz! Bir marta o'lgan o'yinchining qobiliyatidan foydalanishingiz mumkin."
+    night_action = True
+    action_type = "necromancy"
+
+
+class DengizIloni(BaseRole):
+    """Yovuz jodugar — ikki o'yinchining rolini almashtiradi"""
+    name = "Yovuz jodugar"
+    title = "Dengiz Iloni"
+    emoji = "🐍"
+    team = "mafia"
+    description = "Siz yovuz jodugarsiz! Kechasi ikki o'yinchining rollarini almashtirishingiz mumkin."
+    night_action = True
+    action_type = "swap_roles"
+
+
+class Piranya(BaseRole):
+    """Odamxo'r — har o'ldirishda kuchayadi"""
+    name = "Odamxo'r"
+    title = "Piranya"
+    emoji = "🩸"
+    team = "mafia"
+    description = "Siz odamxo'rsiz! Har bir o'ldirishingizda kuchayib borasiz. Ovozingiz qo'shimcha vaznga ega bo'ladi."
+    night_action = True
+    action_type = "mafia_kill"
+
+
+class IfloslanganSuv(BaseRole):
+    """Qora Tabib — mafiyani davolaydi, shaharni zaharlaydi"""
+    name = "Qora Tabib"
+    title = "Ifloslangan Suv"
+    emoji = "🦠"
+    team = "mafia"
+    description = "Siz qora tabibsiz! Kechasi bir mafiya a'zosini davolaysiz yoki bir shahar aholisini zaharlaysiz."
+    night_action = True
+    action_type = "dark_heal"

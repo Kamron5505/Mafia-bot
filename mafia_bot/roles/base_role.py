@@ -1,49 +1,44 @@
-from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 
-@dataclass
-class Role:
-    name: str
-    title: str
-    emoji: str
-    team: str
-    description: str
+class BaseRole:
+    """Barcha rollar uchun asosiy klass"""
+
+    name: str = ""
+    title: str = ""
+    emoji: str = ""
+    team: str = ""  # "mafia", "town", "neutral"
+    description: str = ""
     night_action: bool = False
     action_type: str = ""
-    max_uses: int = -1
     passive: bool = False
 
-    def full_name(self) -> str:
-        return f"{self.emoji} {self.title} ({self.name})"
+    def __init__(self):
+        pass
 
     def short_name(self) -> str:
         return f"{self.emoji} {self.title}"
 
-    def team_label(self) -> str:
-        labels = {
+    def full_name(self) -> str:
+        return f"{self.emoji} **{self.title}** ({self.name})"
+
+    def get_description(self) -> str:
+        return f"{self.full_name()}\n\n{self.description}\n\nJamoa: {self.team_name()}"
+
+    def team_name(self) -> str:
+        teams = {
             "mafia": "🦈 Qora Kuchlar",
             "town": "🛡 Oq Kuchlar",
             "neutral": "🌪 Neytral",
         }
-        return labels.get(self.team, "Nihol")
+        return teams.get(self.team, "Noma'lum")
 
+    def can_act_at_night(self) -> bool:
+        return self.night_action
 
-ROLES: dict[str, Role] = {}
+    def get_action_players(self, alive_players: List[dict]) -> List[dict]:
+        """Kecha harakati uchun tirik o'yinchilar ro'yxati"""
+        return [p for p in alive_players if not self._is_self(p)]
 
-
-def register_role(role: Role):
-    ROLES[role.name] = role
-    return role
-
-
-def get_role(name: str) -> Optional[Role]:
-    return ROLES.get(name)
-
-
-def get_roles_by_team(team: str) -> list[Role]:
-    return [r for r in ROLES.values() if r.team == team]
-
-
-def get_all_roles() -> list[Role]:
-    return list(ROLES.values())
+    def _is_self(self, player: dict) -> bool:
+        return False  # subclass lar o'zini chiqarib tashlashi mumkin

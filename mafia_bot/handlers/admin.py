@@ -1,102 +1,107 @@
+import logging
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
+from aiogram.enums.chat_type import ChatType
+
 from database.db import Database
-from utils.messages import GAME_STATS
-from utils.state import active_games
+from utils.game_logic import active_games, game_timers, end_game_cleanup
+from utils.messages import (
+    GROUP_ONLY, ADMIN_ONLY, NO_ACTIVE_GAME, GAME_ENDED,
+    GAME_STATS
+)
 
 router = Router()
 db = Database()
+logger = logging.getLogger(__name__)
 
 
 @router.message(Command("endgame"))
 async def cmd_endgame(message: Message):
+    """O'yinni tugatish"""
     chat = message.chat
-    if chat.type == "private":
-        await message.answer("❌ Bu buyruq faqat guruhda ishlaydi.")
+    if chat.type == ChatType.PRIVATE:
+        await message.answer(GROUP_ONLY)
         return
 
     member = await chat.get_member(message.from_user.id)
     if member.status not in ("creator", "administrator"):
-        await message.answer("❌ Faqat guruh adminlari o'yinni tugata oladi.")
+        await message.answer(ADMIN_ONLY)
         return
 
-    game_id = None
-    for gid, g in active_games.items():
-        if g.get("chat_id") == chat.id and g["phase"] != "ended":
-            game_id = gid
-            break
-
-    if not game_id:
-        await message.answer("❌ Faol o'yin topilmadi.")
+    game_data = await db.get_active_game(chat.id)
+    if not game_data:
+        await message.answer(NO_ACTIVE_GAME)
         return
 
-    await db.end_game(game_id)
-    game = active_games.pop(game_id, None)
+    game_id = game_data["game_id"]
+    
+    # Taymerni bekor qilish
+    task = game_timers.pop(game_id, None)
+    if task:
+        task.cancel()
+    
+    await end_game_cleanup(game_id)
+    await message.answer(GAME_ENDED)
 
-    if game:
-        from utils.state import game_timers
-        game_timers.pop(game_id, None)
 
-    await message.answer("✅ O'yin tugatildi.")
-
-
-@router.message(Command("players"))
-async def cmd_players(message: Message):
+@router.message(Command("admin"))
+async def cmd_admin(message: Message):
+    """Admin panel"""
     chat = message.chat
-    if chat.type == "private":
-        await message.answer("Bu buyruq faqat guruhda ishlaydi.")
-        return
-
-    for gid, g in active_games.items():
-        if g.get("chat_id") == chat.id:
-            players = [
-                f"{'✅' if pd['alive'] else '💀'} {pd.get('name', f'ID{uid}')}"
-                for uid, pd in g["players"].items()
-            ]
-            text = "👥 *O'yinchilar:*\n" + "\n".join(players) if players else "Hali hech kim yo'q"
-            await message.answer(text)
+    if chat.type == ChatType.PRIVATE:
+        # Shaxsiy xabarda admin panel
+        from config import ADMIN_IDS
+        if message.from_user.id not in ADMIN_IDS:
+            await message.answer("❌ Siz admin emassiz.")
             return
-
-    await message.answer("❌ Faol o'yin topilmadi.")
+        
+        await message.answer(
+            "👑 **Admin Panel**\n\n"
+            "Mavjud buyruqlar:\n"
+            "/stats - O'yin statistikasi\n"
+            "/endgame - O'yinni tugatish\n"
+            "/players - O'yinchilar ro'yxati",
+            parse_mode="Markdown"
+        )
+    else:
+        await message.answer("👑 Admin panel uchun /endgame, /stats, /players buyruqlaridan foydalaning.")
 
 
 @router.callback_query(F.data.startswith("admin:"))
 async def handle_admin_actions(callback: CallbackQuery):
+    """Admin tugmalari"""
     action = callback.data.split(":")[1]
-
+    
     if action == "end":
         await cmd_endgame(callback.message)
     elif action == "stats":
-        await cmd_stats(callback.message)
-
+        # Statistikani ko'rsatish
+        chat = callback.message.chat
+        game_data = await db.get_active_game(chat.id)
+        if not game_data:
+            await callback.message.answer(NO_ACTIVE_GAME)
+        else:
+            game = active_games.get(game_data["game_id"])
+            if game:
+                players = game["players"]
+                roles_str = ", ".join(
+                    p["role"].short_name() for p in players.values() if p.get("role")
+                )
+                
+                events = await db.get_events(game_data["game_id"])
+                event_text = "\n".join(f"• {e['description']}" for e in events[-5:]) or "Hodisalar yo'q"
+                
+                alive = [p for p in players.values() if p["alive"]]
+                dead = [p for p in players.values() if not p["alive"]]
+                
+                text = GAME_STATS.format(
+                    roles=roles_str,
+                    events=event_text,
+                    alive=len(alive),
+                    alive_list="\n".join(f"✅ {p['name']}" for p in alive) if alive else "—",
+                    dead_list="\n".join(f"💀 {p['name']}" for p in dead) if dead else "—",
+                )
+                await callback.message.answer(text, parse_mode="Markdown")
+    
     await callback.answer()
-
-
-async def cmd_stats(message: Message):
-    for gid, g in active_games.items():
-        if g.get("chat_id") == message.chat.id:
-            alive = []
-            dead = []
-            for uid, pd in g["players"].items():
-                name = pd.get("name", f"ID{uid}")
-                entry = f"{pd['role'].short_name()} — {name}"
-                if pd["alive"]:
-                    alive.append(entry)
-                else:
-                    dead.append(entry)
-
-            events = await db.get_events(gid)
-            event_text = "\n".join(f"• {e['description']}" for e in events[-5:]) or "Hodisalar yo'q"
-
-            text = GAME_STATS.format(
-                roles=", ".join(pd['role'].short_name() for pd in g["players"].values()),
-                events=event_text,
-                alive=len(alive),
-                alive_list="\n".join(alive) if alive else "—",
-                dead_list="\n".join(dead) if dead else "—",
-            )
-            await message.answer(text)
-            return
-
-    await message.answer("❌ Faol o'yin topilmadi.")
