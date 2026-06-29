@@ -1,42 +1,38 @@
-<div align="center">
-
 <p align="center">
   <img src="image.png" alt="Mafia Bot Banner" width="100%">
 </p>
 
-# 🎭 Mafia Bot
-
-### Play. Lie. Win.
-
-# 🎭 Mafia Bot
-
-### Play. Lie. Win.
-
-A modern Telegram bot that fully automates the classic **Mafia** party game in Telegram groups.
+<h1 align="center">🎭 Mafia Bot</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white">
-  <img src="https://img.shields.io/badge/aiogram-3.x-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white">
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
-  <img src="https://img.shields.io/github/license/Kamron5505/Mafia-bot?style=for-the-badge">
-  <img src="https://img.shields.io/github/stars/Kamron5505/Mafia-bot?style=for-the-badge">
+<b>Play. Lie. Win.</b>
 </p>
 
-</div>
+<p align="center">
+A modern Telegram bot that fully automates the classic <b>Mafia</b> party game in Telegram groups.
+</p>
+
+<p align="center">
+<img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white">
+<img src="https://img.shields.io/badge/aiogram-3.x-26A5E4?style=for-the-badge&logo=telegram&logoColor=white">
+<img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
+<img src="https://img.shields.io/github/stars/Kamron5505/Mafia-bot?style=for-the-badge">
+<img src="https://img.shields.io/github/license/Kamron5505/Mafia-bot?style=for-the-badge">
+</p>
 
 ---
 
 # 📖 About
 
-**Mafia Bot** is a fully automated Telegram bot that brings the classic Mafia game to your group chats.
+**Mafia Bot** is a fully automated Telegram bot that brings the classic Mafia game to Telegram.
 
-The bot manages every stage of the game automatically:
+The bot automatically manages every stage of the game:
 
-- 🎮 Creating game rooms
+- 🎮 Create game rooms
 - 👥 Player management
-- 🎭 Random role assignment
-- 🌙 Night actions
-- ☀️ Day discussions
+- 🎭 Automatic role distribution
+- 🌙 Night phase
+- ☀️ Day phase
 - 🗳️ Voting system
 - 🏆 Automatic winner detection
 
@@ -45,40 +41,29 @@ The bot manages every stage of the game automatically:
 # ✨ Features
 
 | Feature | Status |
-|---------|--------|
+|---------|:------:|
 | Create Game Rooms | ✅ |
 | Join Games | ✅ |
-| Automatic Roles | ✅ |
+| Automatic Role Distribution | ✅ |
 | Night Phase | ✅ |
 | Day Phase | ✅ |
-| Voting | ✅ |
+| Voting System | ✅ |
 | Win Detection | ✅ |
 | Telegram Commands | ✅ |
 | Docker Support | ✅ |
 
 ---
 
-# 📸 Preview
-
-<div align="center">
-
-<img src="assets/logo.png" width="180">
-
-</div>
-
----
-
 # 🚀 Quick Start
 
-## Clone Repository
+## Clone the repository
 
 ```bash
 git clone https://github.com/Kamron5505/Mafia-bot.git
-
 cd Mafia-bot
 ```
 
-## Install
+## Install dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -87,7 +72,7 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
-python main.py
+python bot.py
 ```
 
 ---
@@ -120,6 +105,7 @@ BOT_TOKEN=YOUR_BOT_TOKEN
 
 - Python
 - aiogram
+- SQLite
 - Docker
 - Docker Compose
 
@@ -130,15 +116,18 @@ BOT_TOKEN=YOUR_BOT_TOKEN
 ```text
 Mafia-bot/
 │
-├── mafia_bot/
+├── database/
+├── handlers/
+├── keyboards/
+├── roles/
+├── utils/
+├── bot.py
+├── config.py
+├── image.png
+├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
-├── .gitignore
-├── .dockerignore
-├── README.md
-└── assets/
-    ├── banner.png
-    └── logo.png
+└── README.md
 ```
 
 ---
@@ -147,22 +136,22 @@ Mafia-bot/
 
 | Command | Description |
 |---------|-------------|
-| /start | Start the bot |
-| /help | Show available commands |
-| /create | Create a new game |
-| /join | Join a game |
-| /leave | Leave the game |
+| `/start` | Start the bot |
+| `/help` | Show available commands |
+| `/create` | Create a game |
+| `/join` | Join a game |
+| `/leave` | Leave the game |
 
 ---
 
 # 🤝 Contributing
 
-Contributions are always welcome!
+Contributions are welcome!
 
-1. Fork the project
+1. Fork the repository
 2. Create your feature branch
 3. Commit your changes
-4. Push your branch
+4. Push to the branch
 5. Open a Pull Request
 
 ---
