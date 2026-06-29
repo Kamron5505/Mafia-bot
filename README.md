@@ -1,6 +1,8 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/Kamron5505/Mafia-bot/main/assets/banner.png" width="100%" alt="Mafia Bot Banner">
+<p align="center">
+  <img src="Image.png" alt="Mafia Bot Banner" width="100%">
+</p>
 
 # 🎭 Mafia Bot
 
