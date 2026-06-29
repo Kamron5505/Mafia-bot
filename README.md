@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <img src="Image.png" alt="Mafia Bot Banner" width="100%">
+  <img src="../Image.png" alt="Mafia Bot Banner" width="100%">
 </p>
 
 # 🎭 Mafia Bot
