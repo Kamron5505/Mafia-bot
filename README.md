@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="image.png" alt="Mafia Bot Banner" width="100%">
+  <img src="mafia_bot/image.png" width="100%" alt="Banner">
 </p>
 
 <h1 align="center">🎭 Mafia Bot</h1>
