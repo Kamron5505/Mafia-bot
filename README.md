@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://chatgpt.com/backend-api/estuary/content?id=file_00000000166871f49fb28c8f878e9cef&ts=495201&p=fs&cid=1&sig=6668276de05e5f6d0b63274ffb522becab4f674ae6d4ded62e850b4e4886abd9&v=0" alt="Mafia Bot Banner" width="100%">
+<img src="https://raw.githubusercontent.com/Kamron5505/Mafia-bot/main/assets/banner.png" width="100%" alt="Mafia Bot Banner">
 
 # 🎭 Mafia Bot
 
